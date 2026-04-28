@@ -9,8 +9,11 @@ export function useFeed() {
   return useInfiniteQuery({
     queryKey: queryKeys.feed.list(),
     queryFn: ({ pageParam }) =>
-      feedService.getHome({ cursor: pageParam, limit: PAGE_SIZE }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (last) => last.nextCursor ?? undefined,
+      feedService.getHome({ skip: pageParam, limit: PAGE_SIZE }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      const length = lastPage?.length ?? 0;
+      return length < PAGE_SIZE ? undefined : allPages.length * PAGE_SIZE;
+    },
   });
 }

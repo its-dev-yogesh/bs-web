@@ -32,7 +32,7 @@ export function FeedSection() {
         </>
       ) : (
         data?.pages.flatMap((page) =>
-          page.items.map((post) => <PostCard key={post.id} post={post} />),
+          page.map((post) => <PostCard key={post.id} post={post} />),
         )
       )}
 

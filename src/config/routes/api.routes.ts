@@ -22,7 +22,7 @@ export const apiRoutes = {
     comments: (id: string) => `/posts/${id}/comments`,
   },
   feed: {
-    home: "/feed",
+    home: "/feeds",
   },
   connections: {
     list: "/connections",
