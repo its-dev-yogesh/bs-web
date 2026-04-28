@@ -17,7 +17,6 @@ export const apiRoutes = {
   },
   posts: {
     list: "/posts",
-    create: "/posts",
     createListing: "/posts/listings",
     createRequirement: "/posts/requirements",
     byId: (id: string) => `/posts/${id}`,

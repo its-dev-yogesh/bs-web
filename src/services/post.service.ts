@@ -1,6 +1,9 @@
 import { api } from "@/lib/axios";
 import { apiRoutes } from "@/config/routes/api.routes";
-import type { CreatePostInput } from "@/schemas/post.schema";
+import type {
+  CreateListingInput,
+  CreateRequirementInput,
+} from "@/schemas/post.schema";
 import type { Post } from "@/types";
 
 export type RawPost = {
@@ -30,10 +33,41 @@ function mapRawPost(raw: RawPost): Post {
 
 export type ListingItem = Post & { locationText?: string };
 
+type PostWithDetailsResponse = {
+  post: RawPost;
+};
+
 export const postService = {
-  async create(input: CreatePostInput): Promise<Post> {
-    const { data } = await api.post<Post>(apiRoutes.posts.create, input);
-    return data;
+  async createListing(input: CreateListingInput): Promise<RawPost> {
+    const { data } = await api.post<PostWithDetailsResponse>(
+      apiRoutes.posts.createListing,
+      {
+        title: input.title,
+        description: input.description,
+        location_text: input.locationText,
+        listing: {
+          price: input.price,
+          property_type: input.propertyType,
+          listing_type: input.listingType,
+        },
+      },
+    );
+    return data.post;
+  },
+
+  async createRequirement(input: CreateRequirementInput): Promise<RawPost> {
+    const { data } = await api.post<PostWithDetailsResponse>(
+      apiRoutes.posts.createRequirement,
+      {
+        title: input.title,
+        description: input.description,
+        location_text: input.locationText,
+        requirement: {
+          listing_type: input.listingType,
+        },
+      },
+    );
+    return data.post;
   },
 
   async list(params: {

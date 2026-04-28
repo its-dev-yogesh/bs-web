@@ -13,7 +13,10 @@ export function useCreatePost() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreatePostInput) => postService.create(input),
+    mutationFn: (input: CreatePostInput) =>
+      input.kind === "listing"
+        ? postService.createListing(input)
+        : postService.createRequirement(input),
     onMutate: async (input) => {
       await qc.cancelQueries({ queryKey: queryKeys.feed.all });
       const prev = qc.getQueryData<FeedPages>(queryKeys.feed.list());
@@ -22,8 +25,9 @@ export function useCreatePost() {
         const optimistic: Post = {
           id: `optimistic_${Date.now()}`,
           author: { id: "me", username: "you", name: "You" },
-          content: input.content,
-          mediaUrls: input.mediaUrls ?? [],
+          title: input.title,
+          content: input.description ?? input.title,
+          mediaUrls: [],
           likeCount: 0,
           commentCount: 0,
           liked: false,

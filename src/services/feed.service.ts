@@ -8,6 +8,7 @@ type BackendFeedItem = {
   post: {
     _id: string;
     user_id: string;
+    type?: "listing" | "requirement";
     title: string;
     description?: string;
     createdAt?: string;

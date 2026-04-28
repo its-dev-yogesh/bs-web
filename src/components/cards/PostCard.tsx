@@ -62,11 +62,9 @@ export function PostCard({ post }: { post: Post }) {
         </p>
       ) : null}
 
-      {post.mediaUrls.length > 0 ? (
-        <div className="mt-3 px-0.5">
-          <MediaGrid urls={post.mediaUrls} />
-        </div>
-      ) : null}
+      <div className="mt-3 px-0.5">
+        <MediaGrid urls={post.mediaUrls} />
+      </div>
 
       <Stats likeCount={post.likeCount} commentCount={post.commentCount} />
 

@@ -1,9 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { cn } from "@/lib/cn";
+import { Icon } from "@/components/icons/icons";
 
 export function MediaGrid({ urls }: { urls: string[] }) {
-  if (urls.length === 0) return null;
+  if (urls.length === 0) {
+    return (
+      <Tile
+        url=""
+        className="aspect-[4/3] w-full overflow-hidden rounded-lg"
+      />
+    );
+  }
 
   if (urls.length === 1) {
     return (
@@ -53,15 +62,39 @@ export function MediaGrid({ urls }: { urls: string[] }) {
 }
 
 function Tile({ url, className }: { url: string; className?: string }) {
+  const [errored, setErrored] = useState(false);
+  const showFallback = !url || errored;
+
   return (
-    <div className={cn("h-full w-full bg-surface-muted", className)}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={url}
-        alt=""
-        className="h-full w-full object-cover"
-        loading="lazy"
-      />
+    <div
+      className={cn(
+        "relative h-full w-full bg-surface-muted",
+        className,
+      )}
+    >
+      {showFallback ? (
+        <Fallback />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={url}
+          alt=""
+          className="h-full w-full object-cover"
+          loading="lazy"
+          onError={() => setErrored(true)}
+        />
+      )}
+    </div>
+  );
+}
+
+function Fallback() {
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-surface-muted text-muted-foreground">
+      <Icon name="home" width={28} height={28} />
+      <span className="text-[10px] font-medium uppercase tracking-wide">
+        No image
+      </span>
     </div>
   );
 }
