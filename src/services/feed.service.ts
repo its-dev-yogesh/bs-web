@@ -17,6 +17,8 @@ type BackendFeedItem = {
   comments_count: number;
   saves_count: number;
   inquiries_count: number;
+  user_reaction?: string | null;
+  is_saved?: boolean;
 };
 
 export const feedService = {
@@ -27,17 +29,20 @@ export const feedService = {
       apiRoutes.feed.home,
       { params },
     );
-    return data.map((item) => ({
+    const list = Array.isArray(data) ? data : [];
+    return list.map((item) => ({
       id: item.post._id,
       author: {
         id: item.post.user_id,
         username: item.post.user_id,
       },
+      title: item.post.title,
       content: item.post.description ?? item.post.title,
       mediaUrls: (item.media ?? []).map((m) => m.url),
       likeCount: item.likes_count,
       commentCount: item.comments_count,
-      liked: false,
+      liked: item.user_reaction === "like",
+      saved: item.is_saved === true,
       createdAt: item.post.createdAt ?? new Date().toISOString(),
     }));
   },

@@ -22,12 +22,12 @@ const sizeStyles: Record<Size, string> = {
 
 const variantStyles: Record<Variant, string> = {
   primary:
-    "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600",
+    "bg-brand text-white hover:bg-brand-hover disabled:opacity-60",
   outline:
-    "border border-gray-300 bg-white text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800",
+    "border border-surface-border bg-surface text-foreground hover:bg-surface-muted",
   ghost:
-    "bg-transparent text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800",
-  danger: "bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300",
+    "bg-transparent text-foreground hover:bg-surface-muted",
+  danger: "bg-danger text-white hover:opacity-90 disabled:opacity-60",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -50,7 +50,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:cursor-not-allowed disabled:opacity-60",
+          "inline-flex items-center justify-center gap-2 rounded-full font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60",
           sizeStyles[size],
           variantStyles[variant],
           className,

@@ -8,6 +8,7 @@ export const apiRoutes = {
     me: "/auth/me",
   },
   users: {
+    list: "/users",
     create: "/users",
     byId: (id: string) => `/users/${id}`,
     byUsername: (username: string) => `/users/username/${username}`,
@@ -17,12 +18,18 @@ export const apiRoutes = {
   posts: {
     list: "/posts",
     create: "/posts",
+    createListing: "/posts/listings",
+    createRequirement: "/posts/requirements",
     byId: (id: string) => `/posts/${id}`,
-    like: (id: string) => `/posts/${id}/like`,
+    reactions: (id: string) => `/posts/${id}/reactions`,
     comments: (id: string) => `/posts/${id}/comments`,
+    save: (id: string) => `/posts/${id}/save`,
   },
   feed: {
     home: "/feeds",
+  },
+  savedPosts: {
+    list: "/saved-posts",
   },
   connections: {
     list: "/connections",

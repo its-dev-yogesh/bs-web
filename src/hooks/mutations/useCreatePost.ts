@@ -5,9 +5,9 @@ import { postService } from "@/services/post.service";
 import { queryKeys } from "@/lib/query-keys";
 import { uiActions } from "@/store/actions/ui.actions";
 import type { CreatePostInput } from "@/schemas/post.schema";
-import type { Paginated, Post } from "@/types";
+import type { Post } from "@/types";
 
-type FeedPages = { pages: Paginated<Post>[]; pageParams: unknown[] };
+type FeedPages = { pages: Post[][]; pageParams: unknown[] };
 
 export function useCreatePost() {
   const qc = useQueryClient();
@@ -27,12 +27,13 @@ export function useCreatePost() {
           likeCount: 0,
           commentCount: 0,
           liked: false,
+          saved: false,
           createdAt: new Date().toISOString(),
         };
         qc.setQueryData<FeedPages>(queryKeys.feed.list(), {
           ...prev,
-          pages: prev.pages.map((p, i) =>
-            i === 0 ? { ...p, items: [optimistic, ...p.items] } : p,
+          pages: prev.pages.map((page, i) =>
+            i === 0 ? [optimistic, ...page] : page,
           ),
         });
       }

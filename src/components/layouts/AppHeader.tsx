@@ -5,51 +5,70 @@ import { useAppStore } from "@/store/main.store";
 import { selectUser } from "@/store/selectors/auth.selectors";
 import { Avatar } from "@/components/ui/avatar/Avatar";
 import { Button } from "@/components/ui/button/Button";
+import { Dot } from "@/components/ui/badge/Badge";
+import { Icon } from "@/components/icons/icons";
 import { useLogout } from "@/hooks/mutations/useLogout";
 import { siteConfig } from "@/config/site";
 import { appRoutes } from "@/config/routes/app.routes";
 
 export function AppHeader() {
   const user = useAppStore(selectUser);
-  const toggleSidebar = useAppStore((s) => s.toggleSidebar);
   const { mutate: logout, isPending } = useLogout();
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-200 bg-white/90 px-4 backdrop-blur dark:border-gray-800 dark:bg-gray-950/90">
-      <div className="flex items-center gap-3">
-        <button
-          aria-label="Toggle navigation"
-          onClick={toggleSidebar}
-          className="rounded-md p-2 hover:bg-gray-100 md:hidden dark:hover:bg-gray-800"
+    <header className="sticky top-0 z-30 border-b border-surface-border bg-surface/90 backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-3 md:gap-4 md:px-6">
+        {user ? (
+          <Link
+            href={appRoutes.profile(user.username)}
+            className="shrink-0 md:hidden"
+            aria-label="Open profile"
+          >
+            <Avatar
+              src={user.avatarUrl}
+              name={user.name ?? user.username}
+              size="sm"
+            />
+          </Link>
+        ) : null}
+
+        <Link
+          href={appRoutes.home}
+          className="hidden text-lg font-bold tracking-tight text-brand md:block"
         >
-          <span className="block h-0.5 w-5 bg-current" />
-        </button>
-        <Link href={appRoutes.home} className="text-lg font-bold tracking-tight">
           {siteConfig.name}
         </Link>
-      </div>
 
-      <div className="flex items-center gap-3">
+        <label className="flex flex-1 items-center gap-2 rounded-md bg-surface-muted px-3 text-sm text-muted-foreground focus-within:ring-2 focus-within:ring-brand/40">
+          <Icon name="search" width={18} height={18} />
+          <input
+            type="search"
+            placeholder="Search"
+            className="h-9 w-full bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
+          />
+        </label>
+
+        <Link
+          href={appRoutes.messages}
+          aria-label="Messages"
+          className="relative flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-surface-muted"
+        >
+          <Icon name="message" width={22} height={22} />
+          <Dot className="absolute right-2 top-2" />
+        </Link>
+
         {user ? (
-          <>
-            <Link href={appRoutes.profile(user.username)}>
-              <Avatar
-                src={user.avatarUrl}
-                name={user.name ?? user.username}
-                size="sm"
-              />
-            </Link>
-            <Button
-              size="sm"
-              variant="ghost"
-              loading={isPending}
-              onClick={() => logout()}
-            >
-              Sign out
-            </Button>
-          </>
+          <Button
+            size="sm"
+            variant="ghost"
+            loading={isPending}
+            onClick={() => logout()}
+            className="hidden md:inline-flex"
+          >
+            Sign out
+          </Button>
         ) : (
-          <Link href={appRoutes.login}>
+          <Link href={appRoutes.login} className="hidden md:inline-flex">
             <Button size="sm">Sign in</Button>
           </Link>
         )}

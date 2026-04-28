@@ -1,26 +1,90 @@
 import { api } from "@/lib/axios";
 import { apiRoutes } from "@/config/routes/api.routes";
 import type { CreatePostInput } from "@/schemas/post.schema";
-import type { ApiResponse, Post } from "@/types";
+import type { Post } from "@/types";
+
+export type RawPost = {
+  _id: string;
+  user_id: string;
+  type?: string;
+  title?: string;
+  description?: string;
+  location_text?: string;
+  createdAt?: string;
+};
+
+function mapRawPost(raw: RawPost): Post {
+  return {
+    id: raw._id,
+    author: { id: raw.user_id, username: raw.user_id },
+    title: raw.title,
+    content: raw.description ?? raw.title ?? "",
+    mediaUrls: [],
+    likeCount: 0,
+    commentCount: 0,
+    liked: false,
+    saved: false,
+    createdAt: raw.createdAt ?? new Date().toISOString(),
+  };
+}
+
+export type ListingItem = Post & { locationText?: string };
 
 export const postService = {
   async create(input: CreatePostInput): Promise<Post> {
-    const { data } = await api.post<ApiResponse<Post>>(
-      apiRoutes.posts.create,
-      input,
-    );
-    return data.data;
+    const { data } = await api.post<Post>(apiRoutes.posts.create, input);
+    return data;
   },
 
-  async like(id: string): Promise<{ liked: boolean; likeCount: number }> {
-    const { data } = await api.post<
-      ApiResponse<{ liked: boolean; likeCount: number }>
-    >(apiRoutes.posts.like(id));
-    return data.data;
+  async list(params: {
+    type?: "listing" | "requirement";
+    user_id?: string;
+    limit?: number;
+    skip?: number;
+  } = {}): Promise<ListingItem[]> {
+    const { data } = await api.get<RawPost[]>(apiRoutes.posts.list, { params });
+    const list = Array.isArray(data) ? data : [];
+    return list.map((raw) => ({
+      ...mapRawPost(raw),
+      locationText: raw.location_text,
+    }));
+  },
+
+  async savedList(): Promise<ListingItem[]> {
+    const { data } = await api.get<RawPost[] | { post: RawPost }[]>(
+      apiRoutes.savedPosts.list,
+    );
+    const list = Array.isArray(data) ? data : [];
+    const raws = list.map((entry) =>
+      "post" in entry && entry.post ? entry.post : (entry as RawPost),
+    );
+    return raws
+      .filter((r): r is RawPost => Boolean(r && r._id))
+      .map((raw) => ({
+        ...mapRawPost(raw),
+        locationText: raw.location_text,
+        saved: true,
+      }));
+  },
+
+  async like(id: string): Promise<void> {
+    await api.post(apiRoutes.posts.reactions(id), { type: "like" });
+  },
+
+  async unlike(id: string): Promise<void> {
+    await api.delete(apiRoutes.posts.reactions(id));
+  },
+
+  async save(id: string): Promise<void> {
+    await api.post(apiRoutes.posts.save(id));
+  },
+
+  async unsave(id: string): Promise<void> {
+    await api.delete(apiRoutes.posts.save(id));
   },
 
   async getById(id: string): Promise<Post> {
-    const { data } = await api.get<ApiResponse<Post>>(apiRoutes.posts.byId(id));
-    return data.data;
+    const { data } = await api.get<Post>(apiRoutes.posts.byId(id));
+    return data;
   },
 };

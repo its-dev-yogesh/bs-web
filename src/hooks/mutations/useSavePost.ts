@@ -7,33 +7,22 @@ import type { Post } from "@/types";
 
 type FeedPages = { pages: Post[][]; pageParams: unknown[] };
 
-function patchPost(pages: FeedPages, postId: string, fn: (p: Post) => Post) {
-  return {
-    ...pages,
-    pages: pages.pages.map((page) =>
-      page.map((p) => (p.id === postId ? fn(p) : p)),
-    ),
-  };
-}
-
-export function useLikePost() {
+export function useSavePost() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, liked }: { id: string; liked: boolean }) =>
-      liked ? postService.unlike(id) : postService.like(id),
-    onMutate: async ({ id, liked }) => {
+    mutationFn: ({ id, saved }: { id: string; saved: boolean }) =>
+      saved ? postService.unsave(id) : postService.save(id),
+    onMutate: async ({ id, saved }) => {
       await qc.cancelQueries({ queryKey: queryKeys.feed.all });
       const prev = qc.getQueryData<FeedPages>(queryKeys.feed.list());
       if (prev) {
-        qc.setQueryData<FeedPages>(
-          queryKeys.feed.list(),
-          patchPost(prev, id, (p) => ({
-            ...p,
-            liked: !liked,
-            likeCount: p.likeCount + (liked ? -1 : 1),
-          })),
-        );
+        qc.setQueryData<FeedPages>(queryKeys.feed.list(), {
+          ...prev,
+          pages: prev.pages.map((page) =>
+            page.map((p) => (p.id === id ? { ...p, saved: !saved } : p)),
+          ),
+        });
       }
       return { prev };
     },

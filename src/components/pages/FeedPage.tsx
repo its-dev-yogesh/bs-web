@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import { FeedSection } from "@/components/sections/FeedSection";
 
 export function FeedPage() {
-  return <FeedSection />;
+  return (
+    <Suspense fallback={null}>
+      <FeedSection />
+    </Suspense>
+  );
 }

@@ -11,6 +11,11 @@ export const userService = {
     return data;
   },
 
+  async list(): Promise<User[]> {
+    const { data } = await api.get<User[]>(apiRoutes.users.list);
+    return Array.isArray(data) ? data : [];
+  },
+
   async update(id: string, input: Partial<UpdateProfileInput>): Promise<User> {
     const { data } = await api.put<User>(apiRoutes.users.update(id), input);
     return data;
