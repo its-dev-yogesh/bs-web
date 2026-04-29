@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState, type CSSProperties } from "react";
 import { cn } from "@/lib/cn";
 
 export interface AvatarProps {
@@ -8,6 +9,7 @@ export interface AvatarProps {
   name?: string;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
+  imageStyle?: CSSProperties;
 }
 
 const sizeMap = {
@@ -27,7 +29,13 @@ function initials(name?: string) {
     .toUpperCase();
 }
 
-export function Avatar({ src, alt, name, size = "md", className }: AvatarProps) {
+export function Avatar({ src, alt, name, size = "md", className, imageStyle }: AvatarProps) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [src]);
+
   return (
     <span
       className={cn(
@@ -36,9 +44,15 @@ export function Avatar({ src, alt, name, size = "md", className }: AvatarProps) 
         className,
       )}
     >
-      {src ? (
+      {src && !imageFailed ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={alt ?? name ?? "avatar"} className="h-full w-full object-cover" />
+        <img
+          src={src}
+          alt={alt ?? name ?? "avatar"}
+          className="h-full w-full object-cover"
+          style={imageStyle}
+          onError={() => setImageFailed(true)}
+        />
       ) : (
         <span>{initials(name)}</span>
       )}

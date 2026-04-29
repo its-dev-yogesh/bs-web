@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { Button } from "@/components/ui/button/Button";
 
 export default function GlobalError({
   error,
@@ -22,7 +21,13 @@ export default function GlobalError({
           {error.message || "An unexpected error occurred."}
         </p>
         <div className="mt-4">
-          <Button onClick={reset}>Try again</Button>
+          <button
+            type="button"
+            onClick={reset}
+            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover"
+          >
+            Try again
+          </button>
         </div>
       </div>
     </div>

@@ -3,6 +3,8 @@ export const appRoutes = {
   feed: "/",
   login: "/login",
   register: "/register",
+  /** Logged-in user: redirects to `/profile/:username` */
+  myProfile: "/profile",
   profile: (username: string) => `/profile/${username}`,
   network: "/network",
   connections: "/network",

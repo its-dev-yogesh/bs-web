@@ -3,7 +3,7 @@ import { RegisterForm } from "@/components/forms/RegisterForm";
 
 export function RegisterPage() {
   return (
-    <AuthLayout title="Create your account" subtitle="It only takes a minute.">
+    <AuthLayout title="Create your BrokerSocial account" subtitle="Join as buyer, renter, or broker in under a minute">
       <RegisterForm />
     </AuthLayout>
   );

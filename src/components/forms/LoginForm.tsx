@@ -55,7 +55,7 @@ export function LoginForm() {
     return (
       <form
         onSubmit={phoneForm.handleSubmit((v) => startLogin.mutate(v))}
-        className="flex flex-col gap-5"
+        className="flex flex-col gap-4"
       >
         <TextField
           control={phoneForm.control}
@@ -69,15 +69,15 @@ export function LoginForm() {
         <Button
           type="submit"
           loading={startLogin.isPending}
-          className="w-full"
+          className="w-full h-10 text-[13px]"
         >
           Send OTP
         </Button>
-        <p className="text-center text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
           <Link
             href={appRoutes.register}
-            className="text-blue-600 hover:underline"
+            className="text-brand hover:underline"
           >
             Create one
           </Link>
@@ -89,9 +89,9 @@ export function LoginForm() {
   return (
     <form
       onSubmit={otpForm.handleSubmit((v) => verify.mutate(v))}
-      className="flex flex-col gap-5"
+      className="flex flex-col gap-4"
     >
-      <div className="rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:bg-blue-500/10 dark:text-blue-200">
+      <div className="rounded-lg bg-brand-soft px-4 py-3 text-sm text-foreground">
         Enter the 6-digit code sent to{" "}
         <span className="font-semibold">{phone}</span>.
       </div>
@@ -105,7 +105,7 @@ export function LoginForm() {
         autoComplete="one-time-code"
       />
 
-      <Button type="submit" loading={verify.isPending} className="w-full">
+      <Button type="submit" loading={verify.isPending} className="w-full h-10 text-[13px]">
         Verify and sign in
       </Button>
 
@@ -113,7 +113,7 @@ export function LoginForm() {
         <button
           type="button"
           onClick={() => setStep("phone")}
-          className="text-gray-600 hover:underline dark:text-gray-300"
+          className="text-muted-foreground hover:underline"
         >
           Use a different number
         </button>
@@ -121,7 +121,7 @@ export function LoginForm() {
           type="button"
           disabled={resend.isPending}
           onClick={() => resend.mutate({ phone })}
-          className="text-blue-600 hover:underline disabled:opacity-60"
+          className="text-brand hover:underline disabled:opacity-60"
         >
           {resend.isPending ? "Resending…" : "Resend OTP"}
         </button>

@@ -14,16 +14,24 @@ export const apiRoutes = {
     byUsername: (username: string) => `/users/username/${username}`,
     byEmail: (email: string) => `/users/email/${encodeURIComponent(email)}`,
     update: (id: string) => `/users/${id}`,
+    profile: (id: string) => `/users/${id}/profile`,
   },
   posts: {
     list: "/posts",
-    create: "/posts",
     createListing: "/posts/listings",
     createRequirement: "/posts/requirements",
     byId: (id: string) => `/posts/${id}`,
+    media: (id: string) => `/posts/${id}/media`,
     reactions: (id: string) => `/posts/${id}/reactions`,
     comments: (id: string) => `/posts/${id}/comments`,
     save: (id: string) => `/posts/${id}/save`,
+  },
+  /** Threaded comments use posts.comments; likes are separate paths (match bs-backend). */
+  comments: {
+    byId: (commentId: string) => `/comments/${commentId}`,
+  },
+  commentLikes: {
+    like: (commentId: string) => `/comments/${commentId}/like`,
   },
   feed: {
     home: "/feeds",
@@ -44,6 +52,31 @@ export const apiRoutes = {
     thread: (id: string) => `/messages/threads/${id}`,
     send: (threadId: string) => `/messages/threads/${threadId}/messages`,
   },
+  leads: {
+    list: "/leads",
+    create: "/leads",
+    updateStatus: (id: string) => `/leads/${id}/status`,
+  },
+  search: {
+    list: "/search",
+  },
+  verification: {
+    submitKyc: "/verification/kyc",
+    myKyc: "/verification/kyc/me",
+    pendingKyc: "/verification/kyc/pending",
+    reviewKyc: (id: string) => `/verification/kyc/${id}/review`,
+  },
+  moderation: {
+    report: "/moderation/reports",
+    openReports: "/moderation/reports/open",
+    reviewReport: (id: string) => `/moderation/reports/${id}/review`,
+  },
+  analytics: {
+    dashboard: "/analytics/dashboard",
+  },
+  monetization: {
+    plans: "/monetization/plans",
+  },
   jobs: {
     list: "/jobs",
     byId: (id: string) => `/jobs/${id}`,
@@ -52,9 +85,12 @@ export const apiRoutes = {
   notifications: {
     list: "/notifications",
     markRead: (id: string) => `/notifications/${id}/read`,
+    markAllRead: "/notifications/read-all",
     unreadCount: "/notifications/unread-count",
   },
   uploads: {
-    sign: "/uploads/sign",
+    single: "/upload/single",
+    multiple: "/upload/multiple",
+    fields: "/upload/fields",
   },
 } as const;

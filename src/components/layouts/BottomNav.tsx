@@ -1,73 +1,78 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { bottomNav } from "@/config/nav";
-import { Icon } from "@/components/icons/icons";
-import { Dot } from "@/components/ui/badge/Badge";
+import { usePathname, useRouter } from "next/navigation";
+import { Home, Users, Plus, Bell, Briefcase } from "lucide-react";
 import { cn } from "@/lib/cn";
-
-function isActive(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
+import { appRoutes } from "@/config/routes/app.routes";
+import { useAppStore } from "@/store/main.store";
+import { selectUser } from "@/store/selectors/auth.selectors";
 
 export function BottomNav() {
-  const pathname = usePathname();
   const router = useRouter();
-  const search = useSearchParams();
+  const pathname = usePathname();
+  const user = useAppStore(selectUser);
+  const isLoggedIn = Boolean(user?._id ?? user?.id);
 
-  const openCompose = () => {
-    const params = new URLSearchParams(search?.toString() ?? "");
-    params.set("compose", "1");
-    router.push(`/?${params.toString()}`);
-  };
+  const alertsHref = isLoggedIn
+    ? appRoutes.notifications
+    : `${appRoutes.login}?returnUrl=${encodeURIComponent(appRoutes.notifications)}`;
+
+  const navItems = [
+    { label: "Home", href: appRoutes.home, icon: Home },
+    { label: "Brokers", href: appRoutes.network, icon: Users },
+    { label: "Post", href: appRoutes.compose, icon: Plus, isAction: true },
+    { label: "Alerts", href: alertsHref, icon: Bell, badge: isLoggedIn },
+    { label: "Listings", href: appRoutes.listings, icon: Briefcase },
+  ];
 
   return (
-    <nav
-      aria-label="Primary"
-      className="pb-safe fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-between border-t border-surface-border bg-surface/95 px-2 backdrop-blur md:hidden"
-    >
-      {bottomNav.map((item) => {
-        if (item.kind === "action") {
+    <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 flex h-[64px] items-center justify-between bg-surface px-6 md:hidden rounded-t-[24px] shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+      {navItems.map((item) => {
+        const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+
+        if (item.isAction) {
           return (
-            <button
-              key={item.label}
-              onClick={openCompose}
-              className="flex flex-1 flex-col items-center justify-center pt-2 pb-1"
-              aria-label={item.label}
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand text-white shadow-md transition active:scale-95">
-                <Icon name={item.icon} width={26} height={26} strokeWidth={2.4} />
-              </span>
-              <span className="mt-0.5 text-[10px] font-medium text-muted-foreground">
+            <div key="post" className="relative flex flex-col items-center justify-center h-full w-[20%]">
+              <button
+                type="button"
+                onClick={() => router.push(isLoggedIn ? appRoutes.compose : appRoutes.login)}
+                className="absolute -top-5 flex h-[48px] w-[48px] items-center justify-center rounded-full bg-brand text-white shadow-lg transition active:scale-95 border-4 border-surface"
+                aria-label="Post"
+              >
+                <Plus className="h-6 w-6" strokeWidth={2.5} />
+              </button>
+              <span className="text-[10px] text-muted-foreground font-medium mt-auto mb-1">
                 {item.label}
               </span>
-            </button>
+            </div>
           );
         }
-        const active = isActive(pathname, item.href);
+
+        const Icon = item.icon;
+
         return (
           <Link
-            key={item.href}
+            key={item.label}
             href={item.href}
-            className="relative flex flex-1 flex-col items-center justify-center gap-0.5 pt-2 pb-1"
+            className="flex flex-col items-center justify-center h-full w-[20%] gap-[2px]"
           >
-            <span
-              className={cn(
-                "relative flex items-center justify-center transition",
-                active ? "text-brand" : "text-muted-foreground",
+            <div className="relative">
+              <Icon
+                className={cn(
+                  "h-[22px] w-[22px] transition-colors",
+                  isActive ? "text-brand" : "text-muted-foreground"
+                )}
+                strokeWidth={isActive ? 2.5 : 2}
+              />
+              {item.badge && (
+                <div className="absolute right-0 top-0 h-[8px] w-[8px] rounded-full bg-danger border border-surface transform translate-x-[2px] -translate-y-[2px]" />
               )}
-            >
-              <Icon name={item.icon} width={24} height={24} />
-              {item.badge ? (
-                <Dot className="absolute -right-1 -top-1" />
-              ) : null}
-            </span>
+            </div>
             <span
               className={cn(
-                "text-[10px] font-medium",
-                active ? "text-brand" : "text-muted-foreground",
+                "text-[10px]",
+                isActive ? "text-brand font-semibold" : "text-muted-foreground font-medium"
               )}
             >
               {item.label}

@@ -15,8 +15,8 @@ export const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
         ref={ref}
         aria-invalid={error || undefined}
         className={cn(
-          "h-11 w-full rounded-lg border bg-transparent px-4 text-sm shadow-sm transition placeholder:text-gray-400 focus:outline-none focus:ring-2",
-          "border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-500/20 dark:border-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500",
+          "h-10 w-full rounded-lg border bg-surface px-3 text-[13px] shadow-sm transition placeholder:text-muted-foreground/80 focus:outline-none focus:ring-2",
+          "border-surface-border text-foreground focus:border-brand focus:ring-brand/20",
           error &&
             "border-red-500 text-red-700 focus:border-red-500 focus:ring-red-500/20 dark:text-red-400",
           success &&

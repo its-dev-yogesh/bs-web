@@ -48,7 +48,7 @@ export function RegisterForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5">
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <TextField
         control={form.control}
         name="username"
@@ -98,12 +98,12 @@ export function RegisterForm() {
         name="acceptTerms"
         label="I agree to the Terms of Service"
       />
-      <Button type="submit" loading={isPending} className="w-full">
+      <Button type="submit" loading={isPending} className="w-full h-10 text-[13px]">
         Create account
       </Button>
-      <p className="text-center text-sm text-gray-600 dark:text-gray-400">
+      <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link href={appRoutes.login} className="text-blue-600 hover:underline">
+        <Link href={appRoutes.login} className="text-brand hover:underline">
           Sign in
         </Link>
       </p>

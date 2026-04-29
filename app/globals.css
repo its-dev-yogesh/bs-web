@@ -24,25 +24,11 @@
   --color-brand-soft: var(--brand-soft);
   --color-danger: var(--danger);
   --color-muted-foreground: var(--muted-foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b1116;
-    --foreground: #e6e9eb;
-    --surface: #1b2026;
-    --surface-muted: #11161b;
-    --surface-border: #2a3138;
-    --brand: #70b5f9;
-    --brand-hover: #4ea4f5;
-    --brand-soft: #112233;
-    --muted-foreground: #9aa4ad;
-  }
-}
-
-body {
+ body {
   background: var(--background);
   color: var(--foreground);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,

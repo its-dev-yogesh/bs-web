@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { POST_MAX_LENGTH } from "@/constants";
 
+/** Composer body field only (title/location/post type are separate UI state). */
 export const createPostSchema = z.object({
   content: z
     .string()
@@ -10,3 +11,14 @@ export const createPostSchema = z.object({
   mediaUrls: z.array(z.string().url()).max(8),
 });
 export type CreatePostInput = z.infer<typeof createPostSchema>;
+
+/** Sent to `postService.create` — maps to POST /posts/listings or /posts/requirements. */
+export type CreatePostPayload = {
+  postType: "listing" | "requirement";
+  title: string;
+  location: string;
+  whatsappNumber?: string;
+  content: string;
+  mediaUrls: string[];
+  mediaItems?: Array<{ url: string; type: "image" | "video" | "document" }>;
+};
