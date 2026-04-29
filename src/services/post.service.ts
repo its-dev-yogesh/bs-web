@@ -105,25 +105,37 @@ export const postService = {
         {
           ...base,
           listing: {
-            price: 0,
-            property_type: "flat",
-            listing_type: "sale",
+            price: payload.price ?? 0,
+            property_type: payload.propertyType ?? "flat",
+            listing_type: payload.listingType ?? "sale",
+            amenities: payload.amenities ?? [],
+            project_type: payload.projectType,
+            project_status: payload.projectStatus,
+            config: payload.config,
+            address: payload.address,
+            bhk: payload.bhk,
+            area_sqft: payload.area_sqft,
+            bathrooms: payload.bathrooms,
           },
         },
       );
       data = created;
     } else {
-      const requirement: Record<string, unknown> = {
-        listing_type: "buy",
-      };
-      if (location.trim()) {
-        requirement.preferred_location_text = location.trim();
-      }
       const { data: created } = await api.post<PostWithDetailsResponse>(
         apiRoutes.posts.createRequirement,
         {
           ...base,
-          requirement,
+          requirement: {
+            budget_min: payload.budgetMin,
+            budget_max: payload.budgetMax,
+            property_type: payload.propertyType ?? "flat",
+            listing_type: payload.listingType ?? "buy",
+            config: payload.config,
+            project_type: payload.projectType,
+            project_status: payload.projectStatus,
+            preferred_amenities: payload.amenities ?? [],
+            preferred_location_text: location.trim(),
+          },
         },
       );
       data = created;

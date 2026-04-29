@@ -6,6 +6,9 @@ export type PostComment = {
   post_id: string;
   user_id: string;
   username?: string;
+  name?: string;
+  avatarUrl?: string;
+  headline?: string;
   parent_id?: string | null;
   content: string;
   createdAt?: string;

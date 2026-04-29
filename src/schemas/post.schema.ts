@@ -21,4 +21,18 @@ export type CreatePostPayload = {
   content: string;
   mediaUrls: string[];
   mediaItems?: Array<{ url: string; type: "image" | "video" | "document" }>;
+  // Property listing specific
+  price?: number;
+  propertyType?: string;
+  listingType?: string;
+  amenities?: string[];
+  projectType?: string;
+  projectStatus?: string;
+  config?: string;
+  address?: string;
+  bhk?: number;
+  area_sqft?: number;
+  bathrooms?: number;
+  budgetMin?: number;
+  budgetMax?: number;
 };

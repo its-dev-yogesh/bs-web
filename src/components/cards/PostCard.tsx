@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/avatar/Avatar";
 import {
@@ -13,11 +13,19 @@ import {
   Pencil,
   Trash2,
   Forward,
+  Repeat2,
   FileText,
   Video,
+  Maximize,
+  Bed,
+  Bath,
+  Bookmark,
+  MessageCircle,
+  Heart,
 } from "lucide-react";
 import { Card } from "@/components/ui/card/Card";
 import { useLikePost } from "@/hooks/mutations/useLikePost";
+import { useSavePost } from "@/hooks/mutations/useSavePost";
 import { useDeletePost, useUpdatePost } from "@/hooks/mutations/usePostActions";
 import { appRoutes } from "@/config/routes/app.routes";
 import { cn } from "@/lib/cn";
@@ -32,6 +40,7 @@ import { useCommentLike } from "@/hooks/mutations/useCommentLike";
 import { useDeleteComment } from "@/hooks/mutations/useDeleteComment";
 import { PostCommentSection } from "./PostCommentSection";
 import { FollowOrConnectButton } from "@/components/connect/FollowOrConnectButton";
+import { ContactButton } from "@/components/connect/ContactButton";
 import { useSendDm } from "@/hooks/mutations/useSendDm";
 import { Modal } from "@/components/ui/modal/Modal";
 import { Button } from "@/components/ui/button/Button";
@@ -54,6 +63,7 @@ export function PostCard({ post }: { post: Post }) {
   const myId = user?._id ?? user?.id;
   const isLoggedIn = Boolean(myId);
   const { mutate: like } = useLikePost();
+  const { mutate: save } = useSavePost();
   const { mutate: updatePost, isPending: savingPost } = useUpdatePost();
   const { mutate: deletePost, isPending: deletingPost } = useDeletePost();
   const { mutateAsync: createCommentAsync, isPending: postingComment } =
@@ -254,11 +264,9 @@ export function PostCard({ post }: { post: Post }) {
 
   return (
     <Card className="rounded-[16px] shadow-sm mb-4 border-0">
-      <div className="px-4 pt-3 pb-1 border-b border-surface-border/50">
-        <span className="text-[12px] font-semibold text-foreground">Broker activity update</span>
-      </div>
 
-      <header className="flex items-start gap-3 px-4 pt-3">
+
+      <header className="flex items-center gap-3 px-4 py-3">
         <Link
           href={profileHref}
           onClick={(e) => {
@@ -282,24 +290,26 @@ export function PostCard({ post }: { post: Post }) {
           >
             {displayName}
           </Link>
-          {subline ? (
-            <p className="truncate text-[12px] text-muted-foreground font-medium">
-              {subline}
-            </p>
-          ) : null}
-          <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
-            {formatRelative(post.createdAt)}
-          </p>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+              {typeLabel}
+            </span>
+            <span className="text-[10px] text-muted-foreground">•</span>
+            <span className="text-[10px] text-muted-foreground font-medium">
+              {formatRelative(post.createdAt)}
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {isOwnPost ? (
-            <span className="rounded-full border border-surface-border px-3 py-1 text-[12px] font-semibold text-muted-foreground">
+            <span className="rounded-full bg-surface-muted px-3 py-1 text-[11px] font-bold text-muted-foreground">
               Your post
             </span>
           ) : authorId ? (
             <FollowOrConnectButton
               targetUserId={authorId}
-              variant="brandOutline"
+              variant="outline"
+              className="h-7 px-3 text-[11px] font-bold border-brand text-brand hover:bg-brand-soft"
               label="+ Follow"
               serverConnected={post.authorConnection?.connected}
               serverPendingOutgoing={post.authorConnection?.pendingOutgoing}
@@ -315,7 +325,7 @@ export function PostCard({ post }: { post: Post }) {
               <MoreVertical className="w-5 h-5" />
             </button>
             {menuOpen ? (
-              <div className="absolute right-0 top-9 z-20 w-44 rounded-xl border border-surface-border bg-surface p-1 shadow-lg">
+              <div className="absolute right-0 top-full mt-1 z-20 w-44 rounded-xl border border-surface-border bg-surface p-1 shadow-lg">
                 <button
                   type="button"
                   onClick={() => {
@@ -327,6 +337,12 @@ export function PostCard({ post }: { post: Post }) {
                   <Forward className="h-4 w-4" />
                   Share post
                 </button>
+                {!isOwnPost && post.authorConnection?.connected && (
+                  <div className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[12px] font-medium text-emerald-600 bg-emerald-50/50">
+                    <ThumbsUp className="h-4 w-4 fill-emerald-600" />
+                    Following
+                  </div>
+                )}
                 {isOwnPost ? (
                   <>
                     <button
@@ -356,80 +372,145 @@ export function PostCard({ post }: { post: Post }) {
         </div>
       </header>
 
-      {post.title ? (
-        <div className="mt-3 px-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-bold text-brand">
-              {typeLabel}
-            </span>
-            <Link
-              href={appRoutes.listingDetail(post.id)}
-              className="text-[11px] font-bold text-brand hover:underline"
-            >
-              View full post
-            </Link>
+      {/* Media section at top for listing posts */}
+      {post.type !== "requirement" && post.mediaUrls.length > 0 && (
+        <div className="px-4 pb-2">
+          <div className="rounded-2xl overflow-hidden relative group aspect-[3/2]">
+            <MediaGrid urls={post.mediaUrls} />
+            <div className="absolute top-3 left-3 flex gap-2">
+              <span className="bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-brand shadow-sm uppercase">
+                {post.listing_type === "for_rent" ? "For Rent" : "For Sale"}
+              </span>
+              {/* <span className="bg-brand/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-white shadow-sm uppercase">
+                Featured
+              </span> */}
+            </div>
           </div>
-          <h3 className="mt-2 text-[13px] font-medium text-foreground">{post.title}</h3>
-        </div>
-      ) : (
-        <div className="mt-3 px-4">
-          <Link
-            href={appRoutes.listingDetail(post.id)}
-            className="text-[11px] font-bold text-brand hover:underline"
-          >
-            View full post
-          </Link>
         </div>
       )}
 
-      {post.content ? (
-        <p className="mt-2 px-4 text-[13px] whitespace-pre-wrap text-foreground font-medium">
-          {renderMentions(post.content)}
-        </p>
-      ) : null}
-
-      {post.mediaUrls.length > 0 ? (
-        <div className="mt-3 px-4 pb-2">
-          <div className="rounded-2xl overflow-hidden">
-            <MediaGrid urls={post.mediaUrls} />
+      <div className="px-4 py-2 space-y-2">
+        {/* Price / Budget Tag */}
+        {post.type === "requirement" ? (
+          <div className="text-[20px] font-bold text-brand leading-none">
+            {post.budget_min || post.budget_max ? (
+              <>
+                {post.budget_min ? `₹${post.budget_min.toLocaleString("en-IN")}` : "0"}
+                {post.budget_max ? ` - ₹${post.budget_max.toLocaleString("en-IN")}` : "+"}
+              </>
+            ) : (
+              "Budget on request"
+            )}
+            <span className="ml-2 text-[10px] text-muted-foreground uppercase tracking-tighter">Budget</span>
           </div>
+        ) : post.price ? (
+          <div className="text-[20px] font-bold text-brand leading-none">
+            {typeof post.price === "number" ? `₹${post.price.toLocaleString("en-IN")}` : post.price}
+          </div>
+        ) : (
+          <div className="text-[20px] font-bold text-brand leading-none">Price on request</div>
+        )}
+
+        {/* Address/Location */}
+        <div className="text-[13px] text-muted-foreground font-medium line-clamp-1">
+          {post.address || post.locationText || "Location available on request"}
         </div>
-      ) : null}
-      {(post.mediaItems ?? []).some((m) => m.type !== "image") ? (
-        <div className="mt-2 px-4 pb-2 flex flex-wrap gap-2">
-          {(post.mediaItems ?? [])
-            .filter((m) => m.type !== "image")
-            .map((m, idx) => (
-              <a
-                key={`${m.url}-${idx}`}
-                href={m.url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 rounded-full border border-surface-border px-3 py-1 text-[11px] font-semibold text-foreground hover:bg-surface-muted"
-              >
-                {m.type === "video" ? (
-                  <Video className="h-3.5 w-3.5" />
-                ) : (
-                  <FileText className="h-3.5 w-3.5" />
-                )}
-                {m.type === "video" ? "Video" : "Document"}
-              </a>
+
+        {/* Title */}
+        <h3 className="text-[15px] font-bold text-foreground leading-snug">
+          {post.title || (post.type === "requirement" ? "Property Requirement" : "Modern Property Listing")}
+        </h3>
+
+        {/* Project Details / Type / Status */}
+        <div className="flex flex-wrap gap-2">
+          {post.type === "requirement" && (
+            <span className="bg-brand-soft text-brand px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+              {post.listing_type === "rent" ? "On Rent" : "To Buy"}
+            </span>
+          )}
+          {post.project_type && (
+            <span className="bg-surface-muted px-2 py-0.5 rounded text-[10px] font-bold text-muted-foreground">
+              {post.project_type}
+            </span>
+          )}
+          {post.project_status && (
+            <span className="bg-orange-50 text-orange-600 px-2 py-0.5 rounded text-[10px] font-bold">
+              {post.project_status}
+            </span>
+          )}
+        </div>
+
+        {/* Content/Description */}
+        {post.content && (
+          <p className="text-[13px] text-foreground/80 line-clamp-2 mt-1 font-medium">
+            {renderMentions(post.content)}
+          </p>
+        )}
+
+        {/* Amenities Grid */}
+        <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-2 pt-2 ", post.area_sqft || post.config || post.bathrooms ? "border-t border-surface-border/30 mt-3" : "")}>
+          {post.area_sqft ? (
+            <div className="flex items-center gap-1.5 text-[12px] text-foreground font-semibold">
+              <Maximize className="w-4 h-4 text-muted-foreground" />
+              <span>{post.area_sqft} sq ft</span>
+            </div>
+          ) : null}
+          {post.config ? (
+            <div className="flex items-center gap-1.5 text-[12px] text-foreground font-semibold">
+              <Bed className="w-4 h-4 text-muted-foreground" />
+              <span>{post.config}</span>
+            </div>
+          ) : null}
+          {post.bathrooms ? (
+            <div className="flex items-center gap-1.5 text-[12px] text-foreground font-semibold">
+              <Bath className="w-4 h-4 text-muted-foreground" />
+              <span>{post.bathrooms} baths</span>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Amenities List Tags */}
+        {post.amenities && post.amenities.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {post.amenities.slice(0, 4).map((a) => (
+              <span key={a} className="text-[10px] text-muted-foreground bg-surface-muted/50 px-1.5 py-0.5 rounded">
+                {a}
+              </span>
             ))}
-        </div>
-      ) : null}
+            {post.amenities.length > 4 && (
+              <span className="text-[10px] text-muted-foreground">+{post.amenities.length - 4} more</span>
+            )}
+          </div>
+        )}
+
+        {/* Listed By */}
+        {/* <div className="flex items-center justify-between pt-3">
+           <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+             Listed by <span className="text-foreground">{displayName}</span>
+           </span>
+           <Link
+             href={appRoutes.listingDetail(post.id)}
+             className="text-[11px] font-bold text-brand hover:underline"
+           >
+             View full post
+           </Link>
+        </div> */}
+      </div>
 
       <Stats post={post} />
 
-      <div className="flex justify-between px-2 py-1 border-t border-surface-border/50">
+      <div className="flex items-center justify-between border-t border-surface-border/50 px-2 py-1 ">
         <Action
           icon={ThumbsUp}
-          label="Interested"
+          label="Like"
+          count={post.likeCount}
           active={post.liked}
           onClick={() => (isLoggedIn ? like({ id: post.id, liked: post.liked }) : requireLogin())}
         />
         <Action
           icon={MessageSquare}
           label="Comment"
+          count={post.commentCount}
           active={commentsOpen}
           onClick={() => {
             if (!isLoggedIn) {
@@ -440,28 +521,58 @@ export function PostCard({ post }: { post: Post }) {
           }}
         />
         <Action
-          icon={Share2}
-          label="Share"
-          onClick={() => {
-            void handleRefer();
-          }}
-        />
-        <Action
-          icon={Send}
-          label="Send"
+          icon={Repeat2}
+          label="Repost"
           onClick={() => {
             if (!isLoggedIn) {
               requireLogin();
               return;
             }
-            if (isOwnPost) {
-              uiActions.error("Messaging", "This is your own post.");
-              return;
-            }
-            openDmComposer();
+            void handleRefer();
           }}
         />
-      </div>
+        <Action
+          icon={Bookmark}
+          label={post.saved ? "Saved" : "Save"}
+          active={post.saved}
+          onClick={() => (isLoggedIn ? save({ id: post.id, saved: post.saved }) : requireLogin())}
+        />
+
+        <div className="flex-1 flex justify-center">
+          <ContactButton
+            label="Connect"
+            variant="primary"
+            onClick={() => {
+              if (!isLoggedIn) {
+                requireLogin();
+                return;
+              }
+              if (isOwnPost) {
+                uiActions.error("Contact", "This is your own post.");
+                return;
+              }
+              setDmOpen(true);
+            }}
+          />
+        </div>
+          {/* <div className="flex sm:hidden w-full">
+            <Action
+              icon={MessageCircle}
+              label="Connect"
+              onClick={() => {
+                if (!isLoggedIn) {
+                  requireLogin();
+                  return;
+                }
+                if (isOwnPost) {
+                  uiActions.error("Connect", "This is your own post.");
+                  return;
+                }
+                setDmOpen(true);
+              }}
+            />
+          </div> */}
+        </div>
 
       {commentsOpen ? (
         <div className="border-t border-surface-border/50 px-4 py-3 space-y-3 bg-surface-muted/30">
@@ -471,6 +582,7 @@ export function PostCard({ post }: { post: Post }) {
             <PostCommentSection
               comments={comments}
               myId={myId}
+              postOwnerId={authorId}
               isLoggedIn={isLoggedIn}
               requireLogin={requireLogin}
               commentDraft={commentDraft}
@@ -488,7 +600,7 @@ export function PostCard({ post }: { post: Post }) {
         </div>
       ) : null}
 
-      <div className="px-4 pb-4">
+      {/* <div className="px-4 pb-4">
         <a
           href={waHref}
           target="_blank"
@@ -497,7 +609,7 @@ export function PostCard({ post }: { post: Post }) {
         >
           WhatsApp enquiry
         </a>
-      </div>
+      </div> */}
 
       <Modal open={dmOpen} onClose={() => setDmOpen(false)} title="Message broker" mobilePosition="center">
         <div className="space-y-3">
@@ -600,10 +712,55 @@ export function PostCard({ post }: { post: Post }) {
 }
 
 function Stats({ post }: { post: Post }) {
+  const hasStats =
+    post.likeCount > 0 ||
+    post.commentCount > 0 ||
+    (post.repostCount ?? 0) > 0 ||
+    (post.saveCount ?? 0) > 0;
+  if (!hasStats) return null;
+
   return (
-    <div className="flex items-center justify-between px-4 pb-3 pt-1 text-[11px] text-muted-foreground font-medium">
-      <span>{post.likeCount} brokers interested</span>
-      <span>{post.commentCount} responses</span>
+    <div className="flex items-center justify-between px-4 py-2 text-[13px] text-muted-foreground">
+      {/* Left: Stacked Reaction Icons + Like Count */}
+      <div className="flex items-center">
+        {post.likeCount > 0 && (
+          <div className="flex items-center gap-1.5">
+            <div className="flex -space-x-1">
+              <div className="z-[3] flex h-[16px] w-[16px] items-center justify-center rounded-full bg-blue-500 ring-1 ring-surface">
+                <ThumbsUp className="h-[9px] w-[9px] fill-white text-white" />
+              </div>
+            </div>
+            <span className="ml-1 font-medium">{post.likeCount}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Right: Comments, Reposts and Saves */}
+      <div className="flex items-center gap-1.5 font-medium">
+        {post.commentCount > 0 && (
+          <span>
+            {post.commentCount} {post.commentCount === 1 ? "comment" : "comments"}
+          </span>
+        )}
+        {post.commentCount > 0 &&
+          ((post.repostCount ?? 0) > 0 || (post.saveCount ?? 0) > 0) && (
+            <span>•</span>
+          )}
+        {(post.repostCount ?? 0) > 0 && (
+          <>
+            <span>
+              {post.repostCount}{" "}
+              {post.repostCount === 1 ? "repost" : "reposts"}
+            </span>
+            {(post.saveCount ?? 0) > 0 && <span>•</span>}
+          </>
+        )}
+        {(post.saveCount ?? 0) > 0 && (
+          <span>
+            {post.saveCount} {post.saveCount === 1 ? "save" : "saves"}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -618,20 +775,25 @@ function Action({
   label: string;
   active?: boolean;
   onClick?: () => void;
+  count?: number;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center justify-center gap-1.5 py-2 px-4 text-[12px] font-semibold transition rounded-lg",
-        active
-          ? "text-brand"
-          : "text-muted-foreground hover:bg-surface-muted hover:text-foreground",
+        "group flex flex-1 flex-col items-center justify-center gap-1 py-1.5 transition rounded-lg hover:bg-surface-muted",
+        active ? "text-brand" : "text-muted-foreground hover:text-foreground",
       )}
     >
-      <Icon className="w-[20px] h-[20px]" strokeWidth={1.5} />
-      <span className="text-[10px]">{label}</span>
+      <Icon 
+        className={cn(
+          "w-[20px] h-[20px] group-hover:scale-110 transition-all ease-in-out", 
+          active && "fill-brand/10 text-brand"
+        )} 
+        strokeWidth={2} 
+      />
+      <span className="text-[12px] font-bold">{label}</span>
     </button>
   );
 }

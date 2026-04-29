@@ -47,7 +47,8 @@ export function FollowOrConnectButton({
   const same =
     Boolean(targetUserId && myId) && String(myId) === String(targetUserId);
 
-  if (same || !targetUserId || serverPendingIncoming) return null;
+  // Instagram style: Hide if we are already following them
+  if (same || !targetUserId || serverConnected || sent || serverPendingOutgoing) return null;
 
   const variantClass =
     variant === "primary"
@@ -56,14 +57,9 @@ export function FollowOrConnectButton({
         ? "rounded-full border border-brand px-3 py-1 text-[12px] font-bold text-brand transition hover:bg-brand-soft disabled:opacity-50"
         : "mt-1 rounded-full border border-muted-foreground/60 px-3 py-0.5 text-[12px] font-bold text-muted-foreground hover:bg-surface-muted transition disabled:opacity-70";
 
-  const connectedClass =
-    variant === "primary"
-      ? "inline-flex items-center justify-center gap-1.5 px-5 py-1.5 rounded-full bg-emerald-600/15 text-emerald-800 border border-emerald-600/40 text-[14px] font-bold"
-      : variant === "brandOutline"
-        ? "rounded-full border border-emerald-600/50 px-3 py-1 text-[12px] font-bold text-emerald-800 bg-emerald-600/10"
-        : "mt-1 rounded-full border border-emerald-600/40 px-3 py-0.5 text-[12px] font-bold text-emerald-800 bg-emerald-600/10";
-
-  const onClick = () => {
+  const onClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!myId) {
       router.push(appRoutes.login);
       return;
@@ -73,39 +69,17 @@ export function FollowOrConnectButton({
     });
   };
 
-  const busy = isPending;
-  /** Must use server flags too — after refetch or remount, local `sent` resets but API knows pending. */
-  const showPending =
-    !serverConnected && (sent || serverPendingOutgoing);
-
-  if (serverConnected) {
-    return (
-      <span
-        className={cn(connectedClass, className)}
-        role="status"
-        title="You’re connected with this broker"
-      >
-        Connected
-      </span>
-    );
-  }
-
-  const pendingLabel =
-    variant === "primary" ? "Connection pending" : "Invite sent";
+  // If they follow us but we don't follow them, show "Follow Back"
+  const finalLabel = serverPendingIncoming ? "Follow Back" : label;
 
   return (
     <button
       type="button"
-      disabled={busy || showPending}
+      disabled={isPending}
       onClick={onClick}
-      title={
-        showPending
-          ? "Waiting for them to accept your connection request"
-          : undefined
-      }
       className={cn(variantClass, className)}
     >
-      {showPending ? pendingLabel : busy ? "…" : label}
+      {isPending ? "…" : finalLabel}
     </button>
   );
 }

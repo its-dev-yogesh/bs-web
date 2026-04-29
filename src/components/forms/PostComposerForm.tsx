@@ -39,6 +39,18 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
 
+  // Property Listing Fields
+  const [price, setPrice] = useState("");
+  const [listingType, setListingType] = useState<"sale" | "rent">("sale");
+  const [projectType, setProjectType] = useState("Residential");
+  const [projectStatus, setProjectStatus] = useState("Ready to move");
+  const [config, setConfig] = useState("");
+  const [amenities, setAmenities] = useState("");
+  const [address, setAddress] = useState("");
+  const [areaSqft, setAreaSqft] = useState("");
+  const [budgetMin, setBudgetMin] = useState("");
+  const [budgetMax, setBudgetMax] = useState("");
+
   const form = useForm<CreatePostInput>({
     resolver: zodResolver(createPostSchema),
     defaultValues: { content: "", mediaUrls: [] },
@@ -79,6 +91,19 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
           .filter((m) => m.type === "image")
           .map((m) => m.url),
         mediaItems,
+        // Listing/Requirement shared
+        projectType,
+        projectStatus,
+        config: config || undefined,
+        amenities: amenities ? amenities.split(",").map(a => a.trim()).filter(Boolean) : [],
+        // Listing specific
+        price: selectedPostType === "listing" ? (price ? Number(price) : undefined) : undefined,
+        listingType: selectedPostType === "listing" ? listingType : (listingType === "rent" ? "rent" : "buy"),
+        address: selectedPostType === "listing" ? (address || undefined) : undefined,
+        area_sqft: selectedPostType === "listing" ? (areaSqft ? Number(areaSqft) : undefined) : undefined,
+        // Requirement specific
+        budgetMin: selectedPostType === "requirement" ? (budgetMin ? Number(budgetMin) : undefined) : undefined,
+        budgetMax: selectedPostType === "requirement" ? (budgetMax ? Number(budgetMax) : undefined) : undefined,
       },
       {
         onSuccess: () => {
@@ -88,6 +113,13 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
           setWhatsappNumber("");
           setMediaUrlInput("");
           setMediaUrls([]);
+          setPrice("");
+          setConfig("");
+          setAmenities("");
+          setAddress("");
+          setAreaSqft("");
+          setBudgetMin("");
+          setBudgetMax("");
           onPosted?.();
         },
       },
@@ -226,6 +258,140 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
         placeholder="WhatsApp number with country code (optional)"
         className="h-10 w-full rounded-xl border border-surface-border bg-surface px-3 text-sm text-foreground outline-none focus:border-brand"
       />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl border border-surface-border bg-surface-muted/20">
+        {selectedPostType === "listing" ? (
+          <>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Price</label>
+              <input
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="e.g. 8500000"
+                className="h-9 w-full rounded-lg border border-surface-border bg-surface px-3 text-sm text-foreground outline-none focus:border-brand"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Listing Type</label>
+              <select
+                value={listingType}
+                onChange={(e) => setListingType(e.target.value as "sale" | "rent")}
+                className="h-9 w-full rounded-lg border border-surface-border bg-surface px-2 text-sm text-foreground outline-none focus:border-brand"
+              >
+                <option value="sale">For Sale</option>
+                <option value="rent">For Rent</option>
+              </select>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Budget Min</label>
+              <input
+                type="number"
+                value={budgetMin}
+                onChange={(e) => setBudgetMin(e.target.value)}
+                placeholder="e.g. 5000000"
+                className="h-9 w-full rounded-lg border border-surface-border bg-surface px-3 text-sm text-foreground outline-none focus:border-brand"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Budget Max</label>
+              <input
+                type="number"
+                value={budgetMax}
+                onChange={(e) => setBudgetMax(e.target.value)}
+                placeholder="e.g. 9000000"
+                className="h-9 w-full rounded-lg border border-surface-border bg-surface px-3 text-sm text-foreground outline-none focus:border-brand"
+              />
+            </div>
+            <div className="sm:col-span-2 space-y-1">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Requirement Type</label>
+              <select
+                value={listingType}
+                onChange={(e) => setListingType(e.target.value as "sale" | "rent")}
+                className="h-9 w-full rounded-lg border border-surface-border bg-surface px-2 text-sm text-foreground outline-none focus:border-brand"
+              >
+                <option value="sale">To Buy</option>
+                <option value="rent">On Rent</option>
+              </select>
+            </div>
+          </>
+        )}
+
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Config</label>
+          <input
+            value={config}
+            onChange={(e) => setConfig(e.target.value)}
+            placeholder="e.g. 2bhk, Villa"
+            className="h-9 w-full rounded-lg border border-surface-border bg-surface px-3 text-sm text-foreground outline-none focus:border-brand"
+          />
+        </div>
+
+        {selectedPostType === "listing" && (
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Area (sq ft)</label>
+            <input
+              type="number"
+              value={areaSqft}
+              onChange={(e) => setAreaSqft(e.target.value)}
+              placeholder="e.g. 1500"
+              className="h-9 w-full rounded-lg border border-surface-border bg-surface px-3 text-sm text-foreground outline-none focus:border-brand"
+            />
+          </div>
+        )}
+
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Project Type</label>
+          <select
+            value={projectType}
+            onChange={(e) => setProjectType(e.target.value)}
+            className="h-9 w-full rounded-lg border border-surface-border bg-surface px-2 text-sm text-foreground outline-none focus:border-brand"
+          >
+            {["Residential", "Commercial", "Industrial", "Mixed Use"].map(t => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Status</label>
+          <select
+            value={projectStatus}
+            onChange={(e) => setProjectStatus(e.target.value)}
+            className="h-9 w-full rounded-lg border border-surface-border bg-surface px-2 text-sm text-foreground outline-none focus:border-brand"
+          >
+            {["Ready to move", "Under Construction"].map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
+        {selectedPostType === "listing" && (
+          <div className="sm:col-span-2 space-y-1">
+            <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Full Address</label>
+            <input
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="e.g. 123 Main St, Manchester, KY"
+              className="h-9 w-full rounded-lg border border-surface-border bg-surface px-3 text-sm text-foreground outline-none focus:border-brand"
+            />
+          </div>
+        )}
+
+        <div className="sm:col-span-2 space-y-1">
+          <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">
+            {selectedPostType === "listing" ? "Amenities" : "Preferred Amenities"} (comma separated)
+          </label>
+          <input
+            value={amenities}
+            onChange={(e) => setAmenities(e.target.value)}
+            placeholder="e.g. Pool, Gym, Parking"
+            className="h-9 w-full rounded-lg border border-surface-border bg-surface px-3 text-sm text-foreground outline-none focus:border-brand"
+          />
+        </div>
+      </div>
       <TextAreaField
         control={form.control}
         name="content"

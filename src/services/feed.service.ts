@@ -17,6 +17,7 @@ type BackendFeedItem = {
     title: string;
     description?: string;
     whatsapp_number?: string;
+    location_text?: string;
     createdAt?: string;
   };
   media: Array<{ url: string; type?: "image" | "video" | "document" }>;
@@ -29,6 +30,8 @@ type BackendFeedItem = {
   author_connected?: boolean;
   author_pending_outgoing?: boolean;
   author_pending_incoming?: boolean;
+  listing?: any;
+  requirement?: any;
 };
 
 function mapListingToFeedPost(p: ListingItem): Post {
@@ -80,6 +83,7 @@ export const feedService = {
         title: item.post.title,
         content: item.post.description ?? item.post.title,
         whatsappNumber: item.post.whatsapp_number,
+        locationText: item.post.location_text,
         mediaUrls: (item.media ?? [])
           .filter((m) => (m.type ?? "image") === "image")
           .map((m) => m.url),
@@ -89,8 +93,11 @@ export const feedService = {
         })),
         likeCount: item.likes_count,
         commentCount: item.comments_count,
+        repostCount: item.inquiries_count,
+        saveCount: item.saves_count,
         liked:
           item.user_reaction === "like" || item.user_reaction === "interested",
+        reposted: false,
         saved: item.is_saved === true,
         createdAt: item.post.createdAt ?? new Date().toISOString(),
         authorConnection: {
@@ -98,6 +105,32 @@ export const feedService = {
           pendingOutgoing: item.author_pending_outgoing === true,
           pendingIncoming: item.author_pending_incoming === true,
         },
+        // Spread listing details if available
+        ...(item.listing ? {
+          price: item.listing.price,
+          property_type: item.listing.property_type,
+          listing_type: item.listing.listing_type,
+          amenities: item.listing.amenities,
+          project_type: item.listing.project_type,
+          project_status: item.listing.project_status,
+          config: item.listing.config,
+          address: item.listing.address,
+          bhk: item.listing.bhk,
+          area_sqft: item.listing.area_sqft,
+          bathrooms: item.listing.bathrooms,
+        } : {}),
+        // Spread requirement details if available
+        ...(item.requirement ? {
+          budget_min: item.requirement.budget_min,
+          budget_max: item.requirement.budget_max,
+          property_type: item.requirement.property_type,
+          listing_type: item.requirement.listing_type,
+          amenities: item.requirement.preferred_amenities,
+          project_type: item.requirement.project_type,
+          project_status: item.requirement.project_status,
+          config: item.requirement.config,
+          locationText: item.requirement.preferred_location_text,
+        } : {}),
       }));
     } catch (error) {
       // JWT missing or expired: use public posts (same browse path as anonymous users).

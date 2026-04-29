@@ -20,4 +20,22 @@ export type Post = {
     pendingOutgoing: boolean;
     pendingIncoming: boolean;
   };
+  // Property Specific Fields
+  price?: number | string;
+  property_type?: string;
+  listing_type?: string;
+  amenities?: string[];
+  project_type?: string;
+  project_status?: string;
+  config?: string;
+  address?: string;
+  bhk?: number;
+  area_sqft?: number;
+  bathrooms?: number;
+  locationText?: string;
+  budget_min?: number;
+  budget_max?: number;
+  repostCount?: number;
+  saveCount?: number;
+  reposted?: boolean;
 };
