@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { siteConfig } from "@/config/site";
+import { Logo } from "@/components/common/Logo";
 
 export function AuthLayout({
   title,
@@ -11,13 +12,14 @@ export function AuthLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen place-items-center bg-gray-50 px-4 dark:bg-gray-950">
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-        <div className="mb-6 text-center">
-          <h1 className="text-xl font-bold tracking-tight">{siteConfig.name}</h1>
-          <h2 className="mt-4 text-2xl font-semibold">{title}</h2>
+    <div className="grid min-h-screen place-items-center bg-surface-muted px-4">
+      <div className="w-full max-w-[390px] rounded-2xl border border-surface-border bg-surface p-6 shadow-sm md:p-7">
+        <div className="mb-5 text-center flex flex-col items-center">
+          <Logo className="w-12 h-12 mb-3" />
+          <h1 className="text-lg font-bold tracking-tight text-foreground">{siteConfig.name}</h1>
+          <h2 className="mt-2 text-xl font-semibold text-foreground">{title}</h2>
           {subtitle && (
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            <p className="mt-1 text-xs text-muted-foreground">
               {subtitle}
             </p>
           )}

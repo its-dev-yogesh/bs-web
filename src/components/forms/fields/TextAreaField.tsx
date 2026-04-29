@@ -49,8 +49,8 @@ export function TextAreaField<TFieldValues extends FieldValues>({
         disabled={disabled}
         maxLength={maxLength}
         className={cn(
-          "w-full rounded-lg border bg-transparent px-4 py-3 text-sm shadow-sm transition placeholder:text-gray-400 focus:outline-none focus:ring-2",
-          "border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-500/20 dark:border-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500",
+          "w-full rounded-lg border bg-surface px-4 py-3 text-sm text-foreground shadow-sm transition placeholder:text-muted-foreground focus:outline-none focus:ring-2",
+          "border-surface-border focus:border-brand focus:ring-brand/20",
           errorMsg &&
             "border-red-500 focus:border-red-500 focus:ring-red-500/20",
           "disabled:cursor-not-allowed disabled:opacity-60",

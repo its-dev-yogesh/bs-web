@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { postService } from "@/services/post.service";
 import { queryKeys } from "@/lib/query-keys";
 import type { Post } from "@/types";
+import { track } from "@/lib/telemetry";
 
 type FeedPages = { pages: Post[][]; pageParams: unknown[] };
 
@@ -39,6 +40,11 @@ export function useLikePost() {
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) qc.setQueryData(queryKeys.feed.list(), ctx.prev);
+    },
+    onSuccess: (_data, vars) => {
+      track("post_interest_toggled", { postId: vars.id, nowLiked: !vars.liked });
+      qc.invalidateQueries({ queryKey: queryKeys.feed.all });
+      qc.invalidateQueries({ queryKey: queryKeys.posts.all });
     },
   });
 }

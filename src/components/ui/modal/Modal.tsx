@@ -9,13 +9,13 @@ export function Modal({
   onClose,
   title,
   children,
-  bodyClassName,
+  mobilePosition = "bottom",
 }: {
   open: boolean;
   onClose: () => void;
   title?: string;
   children: ReactNode;
-  bodyClassName?: string;
+  mobilePosition?: "bottom" | "center";
 }) {
   useEffect(() => {
     if (!open) return;
@@ -33,13 +33,21 @@ export function Modal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
+    <div
+      className={`fixed inset-0 z-50 flex justify-center bg-black/50 p-3 sm:items-center sm:p-4 ${
+        mobilePosition === "center" ? "items-center" : "items-end"
+      }`}
+    >
       <button
         aria-label="Close"
         onClick={onClose}
         className="absolute inset-0 cursor-default"
       />
-      <div className="relative z-10 flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl">
+      <div
+        className={`relative z-10 flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden bg-surface shadow-xl ${
+          mobilePosition === "center" ? "rounded-2xl" : "rounded-t-2xl sm:rounded-2xl"
+        }`}
+      >
         <div className="flex items-center justify-between border-b border-surface-border px-4 py-3">
           <h2 className="text-base font-semibold text-foreground">{title}</h2>
           <button

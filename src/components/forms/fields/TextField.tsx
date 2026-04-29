@@ -38,7 +38,7 @@ export function TextField<TFieldValues extends FieldValues>({
       {label && (
         <label
           htmlFor={id}
-          className="text-sm font-medium text-gray-700 dark:text-gray-200"
+          className="text-xs font-semibold text-foreground"
         >
           {label}
         </label>
@@ -59,7 +59,7 @@ export function TextField<TFieldValues extends FieldValues>({
             "text-xs",
             errorMsg
               ? "text-red-500"
-              : "text-gray-500 dark:text-gray-400",
+              : "text-muted-foreground",
           )}
         >
           {errorMsg ?? hint}

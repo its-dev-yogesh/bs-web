@@ -3,7 +3,13 @@ import { apiRoutes } from "@/config/routes/api.routes";
 
 export type Notification = {
   id: string;
-  type: "connection_request" | "post_like" | "comment" | "mention" | "message";
+  type:
+    | "connection_request"
+    | "post_like"
+    | "comment"
+    | "mention"
+    | "message"
+    | "requirement_match";
   actor: { id: string; name: string; avatarUrl?: string };
   read: boolean;
   link?: string;
@@ -35,5 +41,9 @@ export const notificationService = {
 
   async markRead(id: string): Promise<void> {
     await api.post(apiRoutes.notifications.markRead(id));
+  },
+
+  async markAllRead(): Promise<void> {
+    await api.post(apiRoutes.notifications.markAllRead);
   },
 };

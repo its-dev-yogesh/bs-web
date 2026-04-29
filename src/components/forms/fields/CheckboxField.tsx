@@ -28,18 +28,15 @@ export function CheckboxField<TFieldValues extends FieldValues>({
     <div className={cn("flex flex-col gap-1", className)}>
       <label
         htmlFor={id}
-        className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200"
+        className="inline-flex items-center gap-2 text-sm text-foreground"
       >
         <input
           id={id}
           type="checkbox"
           disabled={disabled}
           checked={Boolean(field.value)}
-          onChange={(e) => field.onChange(e.target.checked)}
-          onBlur={field.onBlur}
-          name={field.name}
-          ref={field.ref}
-          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900"
+          {...field}
+          className="h-4 w-4 rounded border-surface-border text-brand focus:ring-brand"
         />
         {label}
       </label>

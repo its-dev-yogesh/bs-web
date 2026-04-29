@@ -2,13 +2,13 @@ import type { User } from "./user";
 
 export type Post = {
   id: string;
-  author: Pick<
-    User,
-    "id" | "username" | "name" | "avatarUrl" | "headline" | "type"
-  >;
+  type?: "listing" | "requirement";
+  author: Pick<User, "id" | "username" | "name" | "avatarUrl" | "headline">;
   title?: string;
   content: string;
+  whatsappNumber?: string;
   mediaUrls: string[];
+  mediaItems?: Array<{ url: string; type: "image" | "video" | "document" }>;
   likeCount: number;
   commentCount: number;
   inquiryCount: number;
@@ -17,4 +17,10 @@ export type Post = {
   followingAuthor: boolean;
   inquired: boolean;
   createdAt: string;
+  /** Populated from authenticated feed: viewer ↔ post author */
+  authorConnection?: {
+    connected: boolean;
+    pendingOutgoing: boolean;
+    pendingIncoming: boolean;
+  };
 };

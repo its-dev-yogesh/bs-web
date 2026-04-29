@@ -8,9 +8,16 @@ export function useListings(params: {
   type?: "listing" | "requirement";
   user_id?: string;
   limit?: number;
+  status?: "active" | "draft" | "inactive";
 } = {}) {
   return useQuery({
-    queryKey: queryKeys.posts.detail(JSON.stringify({ list: true, ...params })),
+    queryKey: [
+      ...queryKeys.posts.all,
+      "list",
+      params.type ?? "all",
+      params.user_id ?? "",
+      params.limit ?? 20,
+    ] as const,
     queryFn: () => postService.list(params),
     staleTime: 30_000,
   });

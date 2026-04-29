@@ -1,61 +1,50 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { postService } from "@/services/post.service";
+import { commentService } from "@/services/comment.service";
 import { queryKeys } from "@/lib/query-keys";
-import type { Comment, Post } from "@/types";
+import type { Post } from "@/types";
+import { uiActions } from "@/store/actions/ui.actions";
 
 type FeedPages = { pages: Post[][]; pageParams: unknown[] };
+
+function bumpComments(pages: FeedPages, postId: string, delta: number) {
+  return {
+    ...pages,
+    pages: pages.pages.map((page) =>
+      page.map((p) =>
+        p.id === postId
+          ? { ...p, commentCount: Math.max(0, p.commentCount + delta) }
+          : p,
+      ),
+    ),
+  };
+}
 
 export function useDeleteComment(postId: string) {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (commentId: string) => postService.deleteComment(commentId),
-    onMutate: async (commentId) => {
-      await qc.cancelQueries({ queryKey: queryKeys.posts.comments(postId) });
-      const prevComments = qc.getQueryData<Comment[]>(
-        queryKeys.posts.comments(postId),
-      );
-      const prevFeed = qc.getQueryData<FeedPages>(queryKeys.feed.list());
-
-      const target = prevComments?.find((c) => c.id === commentId);
-      const removedIds = new Set<string>([commentId]);
-      // Also remove direct replies to the deleted comment from the local cache
-      // so they don't appear orphaned. Backend cascade is not assumed.
-      if (prevComments) {
-        for (const c of prevComments) {
-          if (c.parentId === commentId) removedIds.add(c.id);
-        }
-        qc.setQueryData<Comment[]>(
-          queryKeys.posts.comments(postId),
-          prevComments.filter((c) => !removedIds.has(c.id)),
+    mutationFn: (commentId: string) => commentService.remove(commentId),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: queryKeys.feed.all });
+      const prev = qc.getQueryData<FeedPages>(queryKeys.feed.list());
+      if (prev) {
+        qc.setQueryData<FeedPages>(
+          queryKeys.feed.list(),
+          bumpComments(prev, postId, -1),
         );
       }
-
-      if (prevFeed) {
-        const removedCount = removedIds.size;
-        qc.setQueryData<FeedPages>(queryKeys.feed.list(), {
-          ...prevFeed,
-          pages: prevFeed.pages.map((page) =>
-            page.map((p) =>
-              p.id === postId
-                ? {
-                    ...p,
-                    commentCount: Math.max(0, p.commentCount - removedCount),
-                  }
-                : p,
-            ),
-          ),
-        });
-      }
-
-      return { prevComments, prevFeed, target };
+      return { prev };
     },
-    onError: (_err, _commentId, ctx) => {
-      if (ctx?.prevComments)
-        qc.setQueryData(queryKeys.posts.comments(postId), ctx.prevComments);
-      if (ctx?.prevFeed) qc.setQueryData(queryKeys.feed.list(), ctx.prevFeed);
+    onError: (err: Error, _commentId, ctx) => {
+      if (ctx?.prev) qc.setQueryData(queryKeys.feed.list(), ctx.prev);
+      uiActions.error("Couldn't delete comment", err.message);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.posts.comments(postId) });
+      qc.invalidateQueries({ queryKey: queryKeys.feed.all });
+      uiActions.success("Comment deleted");
     },
   });
 }

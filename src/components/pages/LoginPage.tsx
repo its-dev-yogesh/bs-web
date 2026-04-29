@@ -4,7 +4,7 @@ import { LoginForm } from "@/components/forms/LoginForm";
 
 export function LoginPage() {
   return (
-    <AuthLayout title="Welcome back" subtitle="Sign in with your phone number">
+    <AuthLayout title="Welcome back to BrokerSocial" subtitle="Sign in to continue posting listings and client requirements">
       <Suspense fallback={null}>
         <LoginForm />
       </Suspense>

@@ -23,14 +23,14 @@ export const messageService = {
     const { data } = await api.get<ApiResponse<Paginated<MessageThread>>>(
       apiRoutes.messages.threads,
     );
-    return data.data;
+    return data?.data ?? { items: [], nextCursor: null, total: 0 };
   },
 
   async getThread(id: string): Promise<Paginated<ChatMessage>> {
     const { data } = await api.get<ApiResponse<Paginated<ChatMessage>>>(
       apiRoutes.messages.thread(id),
     );
-    return data.data;
+    return data?.data ?? { items: [], nextCursor: null, total: 0 };
   },
 
   async send(threadId: string, body: string): Promise<ChatMessage> {
@@ -38,6 +38,25 @@ export const messageService = {
       apiRoutes.messages.send(threadId),
       { body },
     );
-    return data.data;
+    return data?.data;
+  },
+
+  /** Creates a new thread (any fresh threadId) and sends the first message. */
+  async startDirectMessage(
+    targetUserId: string,
+    body: string,
+  ): Promise<{ threadId: string; message: ChatMessage }> {
+    const threadId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `t-${Date.now()}`;
+    const { data } = await api.post<ApiResponse<ChatMessage>>(
+      apiRoutes.messages.send(threadId),
+      { body, targetUserId },
+    );
+    if (!data?.data) {
+      throw new Error("No message returned");
+    }
+    return { threadId, message: data.data };
   },
 };
