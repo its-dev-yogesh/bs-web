@@ -20,9 +20,9 @@ export function AppHeader() {
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-3 md:gap-4 md:px-6">
         {user ? (
           <Link
-            href={appRoutes.profile(user.username)}
+            href={appRoutes.me}
             className="shrink-0 md:hidden"
-            aria-label="Open profile"
+            aria-label="My profile"
           >
             <Avatar
               src={user.avatarUrl}
@@ -56,6 +56,20 @@ export function AppHeader() {
           <Icon name="message" width={22} height={22} />
           <Dot className="absolute right-2 top-2" />
         </Link>
+
+        {user ? (
+          <Link
+            href={appRoutes.me}
+            aria-label="My profile"
+            className="hidden shrink-0 md:inline-flex"
+          >
+            <Avatar
+              src={user.avatarUrl}
+              name={user.name ?? user.username}
+              size="sm"
+            />
+          </Link>
+        ) : null}
 
         {user ? (
           <Button

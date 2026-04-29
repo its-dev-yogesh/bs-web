@@ -2,17 +2,20 @@
 
 import { useEffect, type ReactNode } from "react";
 import { Icon } from "@/components/icons/icons";
+import { cn } from "@/lib/cn";
 
 export function Modal({
   open,
   onClose,
   title,
   children,
+  bodyClassName,
 }: {
   open: boolean;
   onClose: () => void;
   title?: string;
   children: ReactNode;
+  bodyClassName?: string;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -47,7 +50,9 @@ export function Modal({
             <Icon name="close" width={20} height={20} />
           </button>
         </div>
-        <div className="overflow-y-auto p-4">{children}</div>
+        <div className={cn("overflow-y-auto p-4", bodyClassName)}>
+          {children}
+        </div>
       </div>
     </div>
   );

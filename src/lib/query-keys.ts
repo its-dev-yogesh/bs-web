@@ -24,6 +24,15 @@ export const queryKeys = {
     list: () => [...queryKeys.connections.all, "list"] as const,
     suggestions: () => [...queryKeys.connections.all, "suggestions"] as const,
   },
+  follows: {
+    all: ["follows"] as const,
+    status: (userId: string) =>
+      [...queryKeys.follows.all, "status", userId] as const,
+  },
+  me: {
+    all: ["me"] as const,
+    insights: () => [...queryKeys.me.all, "insights"] as const,
+  },
   messages: {
     all: ["messages"] as const,
     threads: () => [...queryKeys.messages.all, "threads"] as const,

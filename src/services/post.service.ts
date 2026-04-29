@@ -4,7 +4,31 @@ import type {
   CreateListingInput,
   CreateRequirementInput,
 } from "@/schemas/post.schema";
-import type { Post } from "@/types";
+import type { Comment, Post } from "@/types";
+
+type RawComment = {
+  _id: string;
+  post_id: string;
+  user_id: string;
+  parent_id?: string | null;
+  content: string;
+  createdAt?: string;
+  like_count?: number;
+  is_liked?: boolean;
+};
+
+function mapRawComment(raw: RawComment): Comment {
+  return {
+    id: raw._id,
+    postId: raw.post_id,
+    parentId: raw.parent_id ?? null,
+    author: { id: raw.user_id, username: raw.user_id },
+    content: raw.content,
+    createdAt: raw.createdAt ?? new Date().toISOString(),
+    likeCount: raw.like_count ?? 0,
+    liked: raw.is_liked === true,
+  };
+}
 
 export type RawPost = {
   _id: string;
@@ -19,14 +43,17 @@ export type RawPost = {
 function mapRawPost(raw: RawPost): Post {
   return {
     id: raw._id,
-    author: { id: raw.user_id, username: raw.user_id },
+    author: { id: raw.user_id, username: raw.user_id, type: "user" },
     title: raw.title,
     content: raw.description ?? raw.title ?? "",
     mediaUrls: [],
     likeCount: 0,
     commentCount: 0,
+    inquiryCount: 0,
     liked: false,
     saved: false,
+    followingAuthor: false,
+    inquired: false,
     createdAt: raw.createdAt ?? new Date().toISOString(),
   };
 }
@@ -120,5 +147,37 @@ export const postService = {
   async getById(id: string): Promise<Post> {
     const { data } = await api.get<Post>(apiRoutes.posts.byId(id));
     return data;
+  },
+
+  async listComments(postId: string): Promise<Comment[]> {
+    const { data } = await api.get<RawComment[]>(
+      apiRoutes.posts.comments(postId),
+    );
+    const list = Array.isArray(data) ? data : [];
+    return list.map(mapRawComment);
+  },
+
+  async createComment(
+    postId: string,
+    content: string,
+    parentId?: string | null,
+  ): Promise<Comment> {
+    const { data } = await api.post<RawComment>(
+      apiRoutes.posts.comments(postId),
+      { content, parent_id: parentId ?? null },
+    );
+    return mapRawComment(data);
+  },
+
+  async deleteComment(commentId: string): Promise<void> {
+    await api.delete(apiRoutes.comments.byId(commentId));
+  },
+
+  async likeComment(commentId: string): Promise<void> {
+    await api.post(apiRoutes.comments.reactions(commentId));
+  },
+
+  async unlikeComment(commentId: string): Promise<void> {
+    await api.delete(apiRoutes.comments.reactions(commentId));
   },
 };

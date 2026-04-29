@@ -4,6 +4,7 @@ export const appRoutes = {
   login: "/login",
   register: "/register",
   profile: (username: string) => `/profile/${username}`,
+  me: "/me",
   network: "/network",
   connections: "/network",
   messages: "/messages",

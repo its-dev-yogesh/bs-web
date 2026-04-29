@@ -17,7 +17,7 @@ export function ListingCard({ item }: { item: ListingItem }) {
     <Card className="px-3 py-3">
       <div className="flex items-start gap-3">
         <Link
-          href={appRoutes.profile(item.author.username)}
+          href={appRoutes.profile(item.author.id ?? item.author.username)}
           className="shrink-0"
         >
           <Avatar

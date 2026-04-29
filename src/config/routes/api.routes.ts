@@ -14,6 +14,7 @@ export const apiRoutes = {
     byUsername: (username: string) => `/users/username/${username}`,
     byEmail: (email: string) => `/users/email/${encodeURIComponent(email)}`,
     update: (id: string) => `/users/${id}`,
+    profile: (userId: string) => `/users/${userId}/profile`,
   },
   posts: {
     list: "/posts",
@@ -23,6 +24,22 @@ export const apiRoutes = {
     reactions: (id: string) => `/posts/${id}/reactions`,
     comments: (id: string) => `/posts/${id}/comments`,
     save: (id: string) => `/posts/${id}/save`,
+    inquiries: (id: string) => `/posts/${id}/inquiries`,
+  },
+  follows: {
+    follow: (userId: string) => `/users/${userId}/follow`,
+    status: (userId: string) => `/users/${userId}/follow/status`,
+  },
+  inquiries: {
+    sent: "/me/inquiries/sent",
+    received: "/me/inquiries/received",
+  },
+  me: {
+    insights: "/me/insights",
+  },
+  comments: {
+    byId: (id: string) => `/comments/${id}`,
+    reactions: (id: string) => `/comments/${id}/reactions`,
   },
   feed: {
     home: "/feeds",

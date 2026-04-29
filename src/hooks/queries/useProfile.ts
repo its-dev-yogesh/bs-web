@@ -4,10 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { userService } from "@/services/user.service";
 import { queryKeys } from "@/lib/query-keys";
 
-export function useProfile(username: string) {
+export function useProfile(idOrUsername: string) {
   return useQuery({
-    queryKey: queryKeys.profile.byUsername(username),
-    queryFn: () => userService.getByUsername(username),
-    enabled: Boolean(username),
+    queryKey: queryKeys.profile.byUsername(idOrUsername),
+    queryFn: () => userService.getProfile(idOrUsername),
+    enabled: Boolean(idOrUsername),
   });
 }

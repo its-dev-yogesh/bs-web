@@ -24,14 +24,17 @@ export function useCreatePost() {
       if (prev) {
         const optimistic: Post = {
           id: `optimistic_${Date.now()}`,
-          author: { id: "me", username: "you", name: "You" },
+          author: { id: "me", username: "you", name: "You", type: "user" },
           title: input.title,
           content: input.description ?? input.title,
           mediaUrls: [],
           likeCount: 0,
           commentCount: 0,
+          inquiryCount: 0,
           liked: false,
           saved: false,
+          followingAuthor: false,
+          inquired: false,
           createdAt: new Date().toISOString(),
         };
         qc.setQueryData<FeedPages>(queryKeys.feed.list(), {
