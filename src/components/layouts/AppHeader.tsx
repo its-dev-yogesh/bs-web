@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Search, MessageSquareMore, Home, Users, Briefcase, Bell, LogOut } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Avatar } from "@/components/ui/avatar/Avatar";
 import { appRoutes } from "@/config/routes/app.routes";
 import { cn } from "@/lib/cn";
@@ -12,6 +13,8 @@ import { selectUser } from "@/store/selectors/auth.selectors";
 import { useUnreadCount } from "@/hooks/queries/useNotifications";
 import { useLogout } from "@/hooks/mutations/useLogout";
 import { Modal } from "@/components/ui/modal/Modal";
+import { userService } from "@/services/user.service";
+import { queryKeys } from "@/lib/query-keys";
 
 import { Logo } from "@/components/common/Logo";
 
@@ -115,14 +118,7 @@ export function AppHeader() {
             <Logo className="w-8 h-8" />
           </Link>
 
-          <label className="flex items-center gap-2 rounded bg-[#EDF3F8] px-3 h-[36px] flex-1 text-sm text-muted-foreground focus-within:ring-2 focus-within:ring-brand/40 md:w-[280px] md:flex-initial">
-            <Search className="w-4 h-4 text-gray-600" />
-            <input
-              type="search"
-              placeholder="Search"
-              className="w-full bg-transparent text-foreground outline-none placeholder:text-gray-600 placeholder:font-normal text-[14px]"
-            />
-          </label>
+          <HeaderSearch />
         </div>
 
         {/* Desktop Navigation */}
@@ -246,5 +242,145 @@ export function AppHeader() {
         </div>
       </Modal>
     </header>
+  );
+}
+
+type SearchUser = {
+  id?: string;
+  _id?: string;
+  username?: string;
+  name?: string;
+  avatarUrl?: string;
+  headline?: string;
+};
+
+function HeaderSearch() {
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQuery(query.trim()), 200);
+    return () => window.clearTimeout(t);
+  }, [query]);
+
+  const enabled = debouncedQuery.length >= 1;
+  const { data: results = [], isFetching } = useQuery({
+    queryKey: queryKeys.users.search(debouncedQuery),
+    queryFn: () => userService.search(debouncedQuery, 10) as Promise<SearchUser[]>,
+    enabled,
+    staleTime: 30 * 1000,
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!containerRef.current) return;
+      if (!containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [open]);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [debouncedQuery, results.length]);
+
+  const goToProfile = (user: SearchUser) => {
+    const slug =
+      (user.username && user.username.trim()) ||
+      String(user._id ?? user.id ?? "").trim();
+    if (!slug) return;
+    setOpen(false);
+    setQuery("");
+    router.push(appRoutes.profile(slug));
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      setOpen(false);
+      return;
+    }
+    if (!results.length) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveIndex((i) => Math.min(i + 1, results.length - 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((i) => Math.max(i - 1, 0));
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      const target = results[activeIndex];
+      if (target) goToProfile(target);
+    }
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative flex-1 md:flex-initial md:w-[280px]"
+    >
+      <label className="flex items-center gap-2 rounded bg-[#EDF3F8] px-3 h-[36px] w-full text-sm text-muted-foreground focus-within:ring-2 focus-within:ring-brand/40">
+        <Search className="w-4 h-4 text-gray-600" />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={onKeyDown}
+          placeholder="Search brokers"
+          className="w-full bg-transparent text-foreground outline-none placeholder:text-gray-600 placeholder:font-normal text-[14px]"
+        />
+      </label>
+      {open && enabled ? (
+        <div className="absolute left-0 right-0 top-full mt-1 z-40 max-h-80 overflow-y-auto rounded-xl border border-surface-border bg-surface shadow-lg">
+          {isFetching && results.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-muted-foreground">
+              Searching…
+            </div>
+          ) : results.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-muted-foreground">
+              No users match &ldquo;{debouncedQuery}&rdquo;
+            </div>
+          ) : (
+            results.map((u, idx) => {
+              const display = u.name?.trim() || u.username || "Broker";
+              return (
+                <button
+                  type="button"
+                  key={String(u._id ?? u.id ?? u.username ?? idx)}
+                  onMouseEnter={() => setActiveIndex(idx)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => goToProfile(u)}
+                  className={cn(
+                    "flex w-full items-center gap-3 px-3 py-2 text-left",
+                    activeIndex === idx ? "bg-surface-muted" : "hover:bg-surface-muted/60",
+                  )}
+                >
+                  <Avatar src={u.avatarUrl} name={display} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13px] font-semibold text-foreground">
+                      {display}
+                    </div>
+                    <div className="truncate text-[11px] text-muted-foreground">
+                      {u.username ? `@${u.username}` : null}
+                      {u.headline ? `${u.username ? " · " : ""}${u.headline}` : null}
+                    </div>
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+      ) : null}
+    </div>
   );
 }

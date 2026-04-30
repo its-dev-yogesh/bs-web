@@ -71,4 +71,8 @@ export const connectionService = {
   async declineRequest(requestId: string): Promise<void> {
     await api.post(apiRoutes.connections.decline(requestId));
   },
+
+  async unfollow(userId: string): Promise<void> {
+    await api.delete(apiRoutes.connections.unfollow(userId));
+  },
 };

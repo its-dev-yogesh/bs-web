@@ -19,6 +19,14 @@ export const queryKeys = {
     byUsername: (username: string) =>
       [...queryKeys.profile.all, "byUsername", username] as const,
   },
+  users: {
+    all: ["users"] as const,
+    search: (q: string) => [...queryKeys.users.all, "search", q] as const,
+  },
+  stories: {
+    all: ["stories"] as const,
+    feed: () => [...queryKeys.stories.all, "feed"] as const,
+  },
   connections: {
     all: ["connections"] as const,
     list: () => [...queryKeys.connections.all, "list"] as const,

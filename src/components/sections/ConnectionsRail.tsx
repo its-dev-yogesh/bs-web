@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSuggestedUsers } from "@/hooks/queries/useSuggestedUsers";
 import { useSendDm } from "@/hooks/mutations/useSendDm";
 import { Avatar } from "@/components/ui/avatar/Avatar";
@@ -14,10 +15,10 @@ import { selectUser } from "@/store/selectors/auth.selectors";
 import { appRoutes } from "@/config/routes/app.routes";
 import { uiActions } from "@/store/actions/ui.actions";
 import { uploadService } from "@/services/upload.service";
+import { storyService } from "@/services/story.service";
+import { queryKeys } from "@/lib/query-keys";
 import {
-  STORIES_STORAGE_KEY,
   detectMediaType,
-  getStoredStories,
   isStoryActive,
   type Story,
   type StoryMediaType,
@@ -35,47 +36,54 @@ function toStoryLabel(name: string) {
 
 export function ConnectionsRail() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const user = useAppStore(selectUser);
   const meId = String(user?._id ?? user?.id ?? "").trim();
   const isLoggedIn = Boolean(meId);
   const { data: users, isLoading } = useSuggestedUsers(12);
   const { mutate: sendDm, isPending: sendingDm } = useSendDm();
-  const [sessionStartTs] = useState(() => Date.now());
-  const [customStories, setCustomStories] = useState<Story[]>(() =>
-    getStoredStories(),
-  );
   const [composerOpen, setComposerOpen] = useState(false);
   const [viewerGroupIndex, setViewerGroupIndex] = useState<number | null>(null);
   const [viewerStoryIndex, setViewerStoryIndex] = useState(0);
   const [dmOpen, setDmOpen] = useState(false);
   const [dmBody, setDmBody] = useState("");
 
-  const activeCustomStories = useMemo(
-    () => customStories.filter((story) => isStoryActive(story)),
-    [customStories],
-  );
+  const { data: feedStories = [] } = useQuery({
+    queryKey: queryKeys.stories.feed(),
+    queryFn: () => storyService.listFeed(),
+    enabled: isLoggedIn,
+    staleTime: 60 * 1000,
+  });
 
-  useEffect(() => {
-    window.localStorage.setItem(
-      STORIES_STORAGE_KEY,
-      JSON.stringify(activeCustomStories),
-    );
-  }, [activeCustomStories]);
+  const createStoryMutation = useMutation({
+    mutationFn: (input: {
+      content: string;
+      mediaUrl?: string;
+      mediaType?: StoryMediaType;
+    }) => storyService.create(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.stories.all });
+      setComposerOpen(false);
+    },
+    onError: (err: Error) => {
+      uiActions.error("Couldn't post story", err.message);
+    },
+  });
 
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setCustomStories((prev) =>
-        prev.filter((story) => isStoryActive(story)),
-      );
-    }, 60 * 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const suggestedStories = useMemo<Story[]>(() => [], []);
+  const deleteStoryMutation = useMutation({
+    mutationFn: (id: string) => storyService.remove(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.stories.all });
+      uiActions.success("Story deleted");
+    },
+    onError: (err: Error) => {
+      uiActions.error("Delete failed", err.message);
+    },
+  });
 
   const stories = useMemo(
-    () => [...activeCustomStories],
-    [activeCustomStories],
+    () => feedStories.filter((s) => isStoryActive(s)),
+    [feedStories],
   );
 
   /** WhatsApp-style: group stories by user; each rail item is one user with all their stories. */
@@ -118,23 +126,13 @@ export function ConnectionsRail() {
     mediaUrl?: string;
     mediaType?: StoryMediaType;
   }) => {
-    const name = user?.name ?? user?.username ?? "You";
-    const username = user?.username ?? "you";
-    const newStory: Story = {
-      id: `custom-${Date.now()}`,
-      userId: meId || undefined,
-      name,
-      username,
-      avatarUrl: user?.avatarUrl,
+    createStoryMutation.mutate({
       content: input.content,
       mediaUrl: input.mediaUrl,
       mediaType: input.mediaUrl
         ? (input.mediaType ?? detectMediaType(input.mediaUrl))
         : undefined,
-      createdAt: new Date().toISOString(),
-    };
-    setCustomStories((prev) => [newStory, ...prev]);
-    setComposerOpen(false);
+    });
   };
 
   const isOwnStory = Boolean(
@@ -267,11 +265,8 @@ export function ConnectionsRail() {
           onViewProfile={handleViewProfile}
           onMessage={handleOpenDm}
           onDelete={(target) => {
-            setCustomStories((prev) =>
-              prev.filter((s) => s.id !== target.id),
-            );
+            deleteStoryMutation.mutate(target.id);
             closeViewer();
-            uiActions.success("Story deleted");
           }}
         />
       ) : null}

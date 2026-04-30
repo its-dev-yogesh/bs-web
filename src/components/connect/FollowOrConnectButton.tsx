@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useFollowBroker } from "@/hooks/mutations/useFollowBroker";
+import { useUnfollowBroker } from "@/hooks/mutations/useUnfollowBroker";
 import { useAppStore } from "@/store/main.store";
 import { selectUser } from "@/store/selectors/auth.selectors";
 import { appRoutes } from "@/config/routes/app.routes";
@@ -37,9 +38,14 @@ export function FollowOrConnectButton({
   const router = useRouter();
   const me = useAppStore(selectUser);
   const myId = me?._id ?? me?.id;
-  const { mutate, isPending } = useFollowBroker();
+  const { mutate: followMutate, isPending: following } = useFollowBroker();
+  const { mutate: unfollowMutate, isPending: unfollowing } = useUnfollowBroker();
   const [sent, setSent] = useState(false);
+  const [connected, setConnected] = useState(serverConnected);
 
+  useEffect(() => {
+    setConnected(serverConnected);
+  }, [serverConnected]);
   useEffect(() => {
     if (serverPendingOutgoing) setSent(true);
   }, [serverPendingOutgoing]);
@@ -47,8 +53,7 @@ export function FollowOrConnectButton({
   const same =
     Boolean(targetUserId && myId) && String(myId) === String(targetUserId);
 
-  // Instagram style: Hide if we are already following them
-  if (same || !targetUserId || serverConnected || sent || serverPendingOutgoing) return null;
+  if (same || !targetUserId) return null;
 
   const variantClass =
     variant === "primary"
@@ -57,29 +62,65 @@ export function FollowOrConnectButton({
         ? "rounded-full border border-brand px-3 py-1 text-[12px] font-bold text-brand transition hover:bg-brand-soft disabled:opacity-50"
         : "mt-1 rounded-full border border-muted-foreground/60 px-3 py-0.5 text-[12px] font-bold text-muted-foreground hover:bg-surface-muted transition disabled:opacity-70";
 
-  const onClick = (e: React.MouseEvent) => {
+  /** Connected → show Unfollow that disconnects on click. */
+  if (connected) {
+    const onUnfollow = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      unfollowMutate(targetUserId, {
+        onSuccess: () => {
+          setConnected(false);
+          setSent(false);
+        },
+      });
+    };
+    return (
+      <button
+        type="button"
+        disabled={unfollowing}
+        onClick={onUnfollow}
+        className={cn(variantClass, className)}
+      >
+        {unfollowing ? "…" : "Unfollow"}
+      </button>
+    );
+  }
+
+  /** Pending request already sent: show neutral "Requested" state. */
+  if (sent || serverPendingOutgoing) {
+    return (
+      <button
+        type="button"
+        disabled
+        className={cn(variantClass, "opacity-60 cursor-default", className)}
+      >
+        Requested
+      </button>
+    );
+  }
+
+  const onFollow = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!myId) {
       router.push(appRoutes.login);
       return;
     }
-    mutate(targetUserId, {
+    followMutate(targetUserId, {
       onSuccess: () => setSent(true),
     });
   };
 
-  // If they follow us but we don't follow them, show "Follow Back"
   const finalLabel = serverPendingIncoming ? "Follow Back" : label;
 
   return (
     <button
       type="button"
-      disabled={isPending}
-      onClick={onClick}
+      disabled={following}
+      onClick={onFollow}
       className={cn(variantClass, className)}
     >
-      {isPending ? "…" : finalLabel}
+      {following ? "…" : finalLabel}
     </button>
   );
 }

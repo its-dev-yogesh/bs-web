@@ -65,7 +65,11 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
       return;
     }
 
-    const mediaItems = mediaUrls.map((url) => {
+    /** Requirements are text-only — never carry media even if some was uploaded
+     *  before switching post type. */
+    const sourceMediaUrls =
+      selectedPostType === "listing" ? mediaUrls : [];
+    const mediaItems = sourceMediaUrls.map((url) => {
       const lower = url.toLowerCase();
       if (/\.(mp4|mov|webm|mkv|avi)(\?|$)/.test(lower)) {
         return { url, type: "video" as const };
@@ -403,60 +407,62 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
         rows={5}
         maxLength={POST_MAX_LENGTH}
       />
-      <div className="space-y-2">
-        <div className="rounded-xl border border-dashed border-surface-border p-3">
-          <label className="text-xs font-semibold text-muted-foreground">
-            Upload images/videos/documents (PDF)
-          </label>
-          <input
-            type="file"
-            multiple
-            accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-            disabled={uploadingFiles}
-            onChange={(e) => {
-              void handleFilePick(e.target.files);
-              e.currentTarget.value = "";
-            }}
-            className="mt-2 block w-full text-xs text-muted-foreground file:mr-3 file:rounded-full file:border file:border-surface-border file:bg-surface file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-foreground"
-          />
-          {uploadingFiles ? (
-            <p className="mt-2 text-[11px] text-muted-foreground">Uploading files…</p>
-          ) : null}
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            value={mediaUrlInput}
-            onChange={(e) => setMediaUrlInput(e.target.value)}
-            placeholder="Add image URL (https://...)"
-            className="h-10 w-full rounded-xl border border-surface-border bg-surface px-3 text-sm text-foreground outline-none focus:border-brand"
-          />
-          <Button type="button" variant="outline" onClick={addMediaUrl}>
-            Add
-          </Button>
-        </div>
-        {mediaUrls.length > 0 ? (
-          <div className="space-y-1">
-            {mediaUrls.map((url) => (
-              <div
-                key={url}
-                className="flex items-center justify-between rounded-lg border border-surface-border bg-surface px-3 py-2"
-              >
-                <span className="truncate text-xs text-muted-foreground">{url}</span>
-                <button
-                  type="button"
-                  onClick={() => removeMediaUrl(url)}
-                  className="text-xs font-semibold text-danger hover:underline"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+      {selectedPostType === "listing" ? (
+        <div className="space-y-2">
+          <div className="rounded-xl border border-dashed border-surface-border p-3">
+            <label className="text-xs font-semibold text-muted-foreground">
+              Upload images/videos/documents (PDF)
+            </label>
+            <input
+              type="file"
+              multiple
+              accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+              disabled={uploadingFiles}
+              onChange={(e) => {
+                void handleFilePick(e.target.files);
+                e.currentTarget.value = "";
+              }}
+              className="mt-2 block w-full text-xs text-muted-foreground file:mr-3 file:rounded-full file:border file:border-surface-border file:bg-surface file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-foreground"
+            />
+            {uploadingFiles ? (
+              <p className="mt-2 text-[11px] text-muted-foreground">Uploading files…</p>
+            ) : null}
           </div>
-        ) : null}
-        <p className="text-[11px] text-muted-foreground">
-          Added {mediaUrls.length}/{MAX_MEDIA} images
-        </p>
-      </div>
+          <div className="flex items-center gap-2">
+            <input
+              value={mediaUrlInput}
+              onChange={(e) => setMediaUrlInput(e.target.value)}
+              placeholder="Add image URL (https://...)"
+              className="h-10 w-full rounded-xl border border-surface-border bg-surface px-3 text-sm text-foreground outline-none focus:border-brand"
+            />
+            <Button type="button" variant="outline" onClick={addMediaUrl}>
+              Add
+            </Button>
+          </div>
+          {mediaUrls.length > 0 ? (
+            <div className="space-y-1">
+              {mediaUrls.map((url) => (
+                <div
+                  key={url}
+                  className="flex items-center justify-between rounded-lg border border-surface-border bg-surface px-3 py-2"
+                >
+                  <span className="truncate text-xs text-muted-foreground">{url}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeMediaUrl(url)}
+                    className="text-xs font-semibold text-danger hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          <p className="text-[11px] text-muted-foreground">
+            Added {mediaUrls.length}/{MAX_MEDIA} images
+          </p>
+        </div>
+      ) : null}
       <div className="flex justify-end">
         <Button type="submit" loading={isPending} disabled={!form.formState.isValid}>
           Publish {selectedPostType === "listing" ? "listing" : "requirement"}

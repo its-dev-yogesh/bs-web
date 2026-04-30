@@ -41,6 +41,15 @@ export const userService = {
     return Array.isArray(data) ? data : [];
   },
 
+  async search(q: string, limit = 10): Promise<User[]> {
+    const trimmed = q.trim();
+    if (!trimmed) return [];
+    const { data } = await api.get<User[]>(apiRoutes.users.search, {
+      params: { q: trimmed, limit },
+    });
+    return Array.isArray(data) ? data : [];
+  },
+
   async remove(id: string): Promise<void> {
     await api.delete(apiRoutes.users.byId(id));
   },

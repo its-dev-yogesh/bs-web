@@ -33,6 +33,10 @@ export const messageService = {
     return data?.data ?? { items: [], nextCursor: null, total: 0 };
   },
 
+  async deleteThread(id: string): Promise<void> {
+    await api.delete(apiRoutes.messages.thread(id));
+  },
+
   async send(threadId: string, body: string): Promise<ChatMessage> {
     const { data } = await api.post<ApiResponse<ChatMessage>>(
       apiRoutes.messages.send(threadId),
@@ -41,22 +45,27 @@ export const messageService = {
     return data?.data;
   },
 
-  /** Creates a new thread (any fresh threadId) and sends the first message. */
+  /** Sends a DM to `targetUserId`, reusing any existing 1-on-1 thread or
+   *  creating one if none exists. The server-resolved threadId comes back in
+   *  the response — never trust the locally generated UUID, which is only a
+   *  hint for first-message thread creation.
+   *  Pass `postId` for inquiry-about-a-post DMs (drives lead creation). */
   async startDirectMessage(
     targetUserId: string,
     body: string,
+    postId?: string,
   ): Promise<{ threadId: string; message: ChatMessage }> {
-    const threadId =
+    const provisionalId =
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : `t-${Date.now()}`;
     const { data } = await api.post<ApiResponse<ChatMessage>>(
-      apiRoutes.messages.send(threadId),
-      { body, targetUserId },
+      apiRoutes.messages.send(provisionalId),
+      { body, targetUserId, postId },
     );
     if (!data?.data) {
       throw new Error("No message returned");
     }
-    return { threadId, message: data.data };
+    return { threadId: data.data.threadId, message: data.data };
   },
 };

@@ -17,6 +17,14 @@ function patchPost(pages: FeedPages, postId: string, fn: (p: Post) => Post) {
   };
 }
 
+function applyLike(p: Post, liked: boolean): Post {
+  return {
+    ...p,
+    liked: !liked,
+    likeCount: p.likeCount + (liked ? -1 : 1),
+  };
+}
+
 export function useLikePost() {
   const qc = useQueryClient();
 
@@ -25,21 +33,30 @@ export function useLikePost() {
       liked ? postService.unlike(id) : postService.like(id),
     onMutate: async ({ id, liked }) => {
       await qc.cancelQueries({ queryKey: queryKeys.feed.all });
-      const prev = qc.getQueryData<FeedPages>(queryKeys.feed.list());
-      if (prev) {
+      await qc.cancelQueries({ queryKey: queryKeys.posts.all });
+      const prevFeed = qc.getQueryData<FeedPages>(queryKeys.feed.list());
+      if (prevFeed) {
         qc.setQueryData<FeedPages>(
           queryKeys.feed.list(),
-          patchPost(prev, id, (p) => ({
-            ...p,
-            liked: !liked,
-            likeCount: p.likeCount + (liked ? -1 : 1),
-          })),
+          patchPost(prevFeed, id, (p) => applyLike(p, liked)),
         );
       }
-      return { prev };
+      const prevPostLists = qc.getQueriesData<Post[]>({
+        queryKey: queryKeys.posts.all,
+      });
+      qc.setQueriesData<Post[]>({ queryKey: queryKeys.posts.all }, (old) => {
+        if (!Array.isArray(old)) return old;
+        return old.map((p) => (p.id === id ? applyLike(p, liked) : p));
+      });
+      return { prevFeed, prevPostLists };
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(queryKeys.feed.list(), ctx.prev);
+      if (ctx?.prevFeed) qc.setQueryData(queryKeys.feed.list(), ctx.prevFeed);
+      if (ctx?.prevPostLists) {
+        for (const [key, data] of ctx.prevPostLists) {
+          qc.setQueryData(key, data);
+        }
+      }
     },
     onSuccess: (_data, vars) => {
       track("post_interest_toggled", { postId: vars.id, nowLiked: !vars.liked });

@@ -6,20 +6,13 @@ import { queryKeys } from "@/lib/query-keys";
 import { uiActions } from "@/store/actions/ui.actions";
 import type { PublicProfile } from "@/types";
 
-export function useFollowBroker() {
+export function useUnfollowBroker() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (userId: string) => connectionService.sendRequest(userId),
+    mutationFn: (userId: string) => connectionService.unfollow(userId),
     onSuccess: (_, targetUserId) => {
       const tid = String(targetUserId).trim();
-      qc.setQueryData(
-        queryKeys.connections.suggestions(),
-        (old: PublicProfile[] | undefined) =>
-          (old ?? []).filter(
-            (p) => String(p._id ?? p.id ?? "").trim() !== tid,
-          ),
-      );
       qc.setQueriesData<PublicProfile>(
         { queryKey: queryKeys.profile.all },
         (old) => {
@@ -28,8 +21,10 @@ export function useFollowBroker() {
           if (id !== tid) return old;
           return {
             ...old,
-            pendingOutgoing: true,
-            isPendingRequest: true,
+            isConnected: false,
+            isPendingRequest: false,
+            pendingOutgoing: false,
+            pendingIncoming: false,
           };
         },
       );
@@ -37,10 +32,10 @@ export function useFollowBroker() {
       qc.invalidateQueries({ queryKey: queryKeys.profile.all });
       qc.invalidateQueries({ queryKey: queryKeys.feed.all });
       qc.invalidateQueries({ queryKey: queryKeys.stories.all });
-      uiActions.success("Connection request sent");
+      uiActions.success("Unfollowed");
     },
     onError: (err: Error) => {
-      uiActions.error("Couldn't send request", err.message);
+      uiActions.error("Couldn't unfollow", err.message);
     },
   });
 }

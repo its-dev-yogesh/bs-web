@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { ThumbsUp, MoreHorizontal, UserPlus, UserMinus, Trash2, Send } from "lucide-react";
+import { ThumbsUp, Trash2 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar/Avatar";
-import { FollowOrConnectButton } from "@/components/connect/FollowOrConnectButton";
 import { Button } from "@/components/ui/button/Button";
 import { appRoutes } from "@/config/routes/app.routes";
 import { cn } from "@/lib/cn";
@@ -76,19 +75,7 @@ function CommentNode({
   const liked = Boolean(node.liked);
   const isOwnComment = Boolean(myId && node.user_id === myId);
   const isPostOwner = Boolean(myId && postOwnerId && myId === postOwnerId);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuOpen]);
+  const canDelete = isOwnComment || isPostOwner;
 
   const authorName = node.name || (node.username ? `@${node.username}` : "Broker");
   const profileHref = node.username ? appRoutes.profile(node.username) : "#";
@@ -132,45 +119,16 @@ function CommentNode({
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-1">
-                {!isOwnComment && (
-                  <FollowOrConnectButton
-                    targetUserId={node.user_id}
-                    variant="outline"
-                    className="h-6 px-2 text-[10px] border-none text-brand hover:bg-brand-soft font-bold"
-                    label={"+ Follow"}
-                  />
-                )}
-                <div className="relative" ref={menuRef}>
-                  <button
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    className="p-1 rounded-full hover:bg-surface-muted text-muted-foreground"
-                  >
-                    <MoreHorizontal className="w-4 h-4" />
-                  </button>
-                  {menuOpen && (
-                    <div className="absolute right-0 bottom-full mb-1 z-50 w-40 bg-surface border border-surface-border rounded-xl shadow-lg p-1">
-                      <button className="flex items-center gap-2 w-full px-3 py-2 text-left text-xs font-medium hover:bg-surface-muted rounded-lg">
-                        <Send className="w-3.5 h-3.5" /> Connect
-                      </button>
-                      <button className="flex items-center gap-2 w-full px-3 py-2 text-left text-xs font-medium hover:bg-surface-muted rounded-lg">
-                        <UserMinus className="w-3.5 h-3.5" /> Unfollow
-                      </button>
-                      {(isOwnComment || isPostOwner) && (
-                        <button
-                          onClick={() => {
-                            onDelete(node._id);
-                            setMenuOpen(false);
-                          }}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-left text-xs font-medium text-danger hover:bg-red-50 rounded-lg"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Delete
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+              {canDelete && (
+                <button
+                  type="button"
+                  aria-label="Delete comment"
+                  onClick={() => onDelete(node._id)}
+                  className="shrink-0 p-1 rounded-full text-muted-foreground hover:bg-surface-muted hover:text-danger"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
             <p className="text-foreground mt-1 whitespace-pre-wrap leading-snug">
               {renderMentions(node.content)}

@@ -23,6 +23,7 @@ export function useRespondConnectionRequest() {
       qc.invalidateQueries({ queryKey: queryKeys.profile.all });
       qc.invalidateQueries({ queryKey: queryKeys.connections.all });
       qc.invalidateQueries({ queryKey: queryKeys.feed.all });
+      qc.invalidateQueries({ queryKey: queryKeys.stories.all });
       uiActions.success(
         action === "accept" ? "You're now connected" : "Request declined",
       );

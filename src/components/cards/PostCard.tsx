@@ -13,7 +13,6 @@ import {
   Pencil,
   Trash2,
   Forward,
-  Repeat2,
   FileText,
   Video,
   Maximize,
@@ -26,7 +25,8 @@ import {
 import { Card } from "@/components/ui/card/Card";
 import { useLikePost } from "@/hooks/mutations/useLikePost";
 import { useSavePost } from "@/hooks/mutations/useSavePost";
-import { useDeletePost, useUpdatePost } from "@/hooks/mutations/usePostActions";
+import { useDeletePost } from "@/hooks/mutations/usePostActions";
+import { PostEditForm } from "@/components/forms/PostEditForm";
 import { appRoutes } from "@/config/routes/app.routes";
 import { cn } from "@/lib/cn";
 import { formatRelative } from "@/lib/date";
@@ -64,7 +64,6 @@ export function PostCard({ post }: { post: Post }) {
   const isLoggedIn = Boolean(myId);
   const { mutate: like } = useLikePost();
   const { mutate: save } = useSavePost();
-  const { mutate: updatePost, isPending: savingPost } = useUpdatePost();
   const { mutate: deletePost, isPending: deletingPost } = useDeletePost();
   const { mutateAsync: createCommentAsync, isPending: postingComment } =
     useCreateComment(post.id);
@@ -79,9 +78,6 @@ export function PostCard({ post }: { post: Post }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [editTitle, setEditTitle] = useState(post.title ?? "");
-  const [editContent, setEditContent] = useState(post.content ?? "");
-  const [editWhatsapp, setEditWhatsapp] = useState(post.whatsappNumber ?? "");
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const { data: comments = [], isLoading: loadingComments } = usePostComments(
@@ -145,7 +141,7 @@ export function PostCard({ post }: { post: Post }) {
       return;
     }
     sendDm(
-      { targetUserId: authorId, body: dmBody },
+      { targetUserId: authorId, body: dmBody, postId: post.id },
       {
         onSuccess: ({ threadId }) => {
           setDmOpen(false);
@@ -157,36 +153,16 @@ export function PostCard({ post }: { post: Post }) {
 
   const openDmComposer = () => {
     const subject = post.title ?? post.content.slice(0, 80);
-    setDmBody(`Regarding "${subject}":\n\n`);
+    const kind = post.type === "requirement" ? "requirement" : "listing";
+    setDmBody(
+      `Hi ${displayName},\n\nI'm interested in your ${kind} "${subject}". Could you please share more details?\n\nThanks!`,
+    );
     setDmOpen(true);
   };
 
   const handleOpenEdit = () => {
-    setEditTitle(post.title ?? "");
-    setEditContent(post.content ?? "");
-    setEditWhatsapp(post.whatsappNumber ?? "");
     setMenuOpen(false);
     setEditOpen(true);
-  };
-
-  const handleSaveEdit = () => {
-    const title = editTitle.trim();
-    const description = editContent.trim();
-    if (!title && !description) {
-      uiActions.error("Edit post", "Title or content is required.");
-      return;
-    }
-    updatePost(
-      {
-        id: post.id,
-        title: title || undefined,
-        description: description || undefined,
-        whatsapp_number: editWhatsapp.trim() || undefined,
-      },
-      {
-        onSuccess: () => setEditOpen(false),
-      },
-    );
   };
 
   const handleDeletePost = () => {
@@ -521,8 +497,8 @@ export function PostCard({ post }: { post: Post }) {
           }}
         />
         <Action
-          icon={Repeat2}
-          label="Repost"
+          icon={Share2}
+          label="Share"
           onClick={() => {
             if (!isLoggedIn) {
               requireLogin();
@@ -540,7 +516,7 @@ export function PostCard({ post }: { post: Post }) {
 
         <div className="flex-1 flex justify-center">
           <ContactButton
-            label="Connect"
+            label="Inquiry"
             variant="primary"
             onClick={() => {
               if (!isLoggedIn) {
@@ -548,10 +524,10 @@ export function PostCard({ post }: { post: Post }) {
                 return;
               }
               if (isOwnPost) {
-                uiActions.error("Contact", "This is your own post.");
+                uiActions.error("Inquiry", "This is your own post.");
                 return;
               }
-              setDmOpen(true);
+              openDmComposer();
             }}
           />
         </div>
@@ -611,10 +587,10 @@ export function PostCard({ post }: { post: Post }) {
         </a>
       </div> */}
 
-      <Modal open={dmOpen} onClose={() => setDmOpen(false)} title="Message broker" mobilePosition="center">
+      <Modal open={dmOpen} onClose={() => setDmOpen(false)} title="Send inquiry" mobilePosition="center">
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            Sends an in-app message to the listing owner about this post.
+            Sends an in-app inquiry to the post owner about this post.
           </p>
           <textarea
             value={dmBody}
@@ -640,42 +616,10 @@ export function PostCard({ post }: { post: Post }) {
       <Modal
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        title="Edit post"
+        title={`Edit ${post.type === "requirement" ? "requirement" : "listing"}`}
         mobilePosition="center"
       >
-        <div className="space-y-3">
-          <input
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            placeholder="Post title"
-            className="h-10 w-full rounded-xl border border-surface-border bg-surface px-3 text-sm text-foreground outline-none focus:border-brand"
-          />
-          <textarea
-            value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
-            rows={5}
-            placeholder="Post details"
-            className="w-full rounded-xl border border-surface-border bg-surface px-3 py-2 text-[13px] text-foreground outline-none focus:border-brand"
-          />
-          <input
-            value={editWhatsapp}
-            onChange={(e) => setEditWhatsapp(e.target.value.replace(/\D/g, ""))}
-            placeholder="WhatsApp number (with country code)"
-            className="h-10 w-full rounded-xl border border-surface-border bg-surface px-3 text-sm text-foreground outline-none focus:border-brand"
-          />
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setEditOpen(false)}
-              className="rounded-full border border-surface-border px-4 py-2 text-xs font-semibold text-foreground hover:bg-surface-muted"
-            >
-              Cancel
-            </button>
-            <Button type="button" loading={savingPost} onClick={handleSaveEdit}>
-              Save changes
-            </Button>
-          </div>
-        </div>
+        <PostEditForm post={post} onDone={() => setEditOpen(false)} />
       </Modal>
 
       <Modal

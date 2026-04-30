@@ -6,6 +6,12 @@ import { getQueryClient } from "@/lib/query-client";
 import { setUnauthorizedHandler } from "@/lib/axios";
 import { authActions } from "@/store/actions/auth.actions";
 import { appRoutes } from "@/config/routes/app.routes";
+import { useNotificationsSocket } from "@/hooks/realtime/useNotificationsSocket";
+
+function RealtimeBridge() {
+  useNotificationsSocket();
+  return null;
+}
 
 export function Providers({ children }: { children: ReactNode }) {
   const queryClient = getQueryClient();
@@ -35,6 +41,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <RealtimeBridge />
       {children}
     </QueryClientProvider>
   );

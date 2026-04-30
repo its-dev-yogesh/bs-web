@@ -10,6 +10,7 @@ export const apiRoutes = {
   users: {
     list: "/users",
     create: "/users",
+    search: "/users/search",
     byId: (id: string) => `/users/${id}`,
     byUsername: (username: string) => `/users/username/${username}`,
     byEmail: (email: string) => `/users/email/${encodeURIComponent(email)}`,
@@ -21,7 +22,10 @@ export const apiRoutes = {
     createListing: "/posts/listings",
     createRequirement: "/posts/requirements",
     byId: (id: string) => `/posts/${id}`,
+    updateListing: (id: string) => `/posts/${id}/listing`,
+    updateRequirement: (id: string) => `/posts/${id}/requirement`,
     media: (id: string) => `/posts/${id}/media`,
+    mediaItem: (mediaId: string) => `/posts/media/${mediaId}`,
     reactions: (id: string) => `/posts/${id}/reactions`,
     comments: (id: string) => `/posts/${id}/comments`,
     save: (id: string) => `/posts/${id}/save`,
@@ -46,6 +50,7 @@ export const apiRoutes = {
     accept: (requestId: string) => `/connections/requests/${requestId}/accept`,
     decline: (requestId: string) =>
       `/connections/requests/${requestId}/decline`,
+    unfollow: (userId: string) => `/connections/${userId}`,
   },
   messages: {
     threads: "/messages/threads",
@@ -56,6 +61,11 @@ export const apiRoutes = {
     list: "/leads",
     create: "/leads",
     updateStatus: (id: string) => `/leads/${id}/status`,
+  },
+  stories: {
+    create: "/stories",
+    feed: "/stories/feed",
+    byId: (id: string) => `/stories/${id}`,
   },
   search: {
     list: "/search",

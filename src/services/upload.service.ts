@@ -24,8 +24,11 @@ export const uploadService = {
     const form = new FormData();
     form.append("file", file);
     form.append("folder", folder);
+    /** Don't set Content-Type — the browser must add the multipart boundary
+     *  itself. Setting it manually as 'multipart/form-data' (no boundary)
+     *  breaks the upload. axios detects FormData and emits the right header. */
     const { data } = await api.post<UploadResponse>(apiRoutes.uploads.single, form, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: { "Content-Type": undefined },
     });
     return data;
   },
@@ -43,7 +46,7 @@ export const uploadService = {
     }
     form.append("folder", folder);
     const { data } = await api.post<UploadFieldsResponse>(apiRoutes.uploads.fields, form, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: { "Content-Type": undefined },
     });
     return {
       images: data.images ?? [],

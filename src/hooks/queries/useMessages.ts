@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { messageService } from "@/services/message.service";
+import { uiActions } from "@/store/actions/ui.actions";
 
 export function useMessageThreads(options?: { enabled?: boolean }) {
   return useQuery({
@@ -28,6 +29,20 @@ export function useSendMessage() {
     onSuccess: (msg) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.messages.threads() });
       queryClient.invalidateQueries({ queryKey: queryKeys.messages.thread(msg.threadId) });
+    },
+  });
+}
+
+export function useDeleteThread() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (threadId: string) => messageService.deleteThread(threadId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.messages.all });
+      uiActions.success("Conversation deleted");
+    },
+    onError: (err: Error) => {
+      uiActions.error("Couldn't delete", err.message);
     },
   });
 }

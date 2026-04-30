@@ -9,8 +9,15 @@ export function useSendDm() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ targetUserId, body }: { targetUserId: string; body: string }) =>
-      messageService.startDirectMessage(targetUserId, body.trim()),
+    mutationFn: ({
+      targetUserId,
+      body,
+      postId,
+    }: {
+      targetUserId: string;
+      body: string;
+      postId?: string;
+    }) => messageService.startDirectMessage(targetUserId, body.trim(), postId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.messages.all });
       uiActions.success("Message sent");

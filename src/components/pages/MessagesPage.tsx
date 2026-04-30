@@ -1,15 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Search, Edit, MoreHorizontal, Image as ImageIcon, Paperclip, Smile } from "lucide-react";
+import { Search, Edit, MoreHorizontal, Image as ImageIcon, Paperclip, Smile, Trash2 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar/Avatar";
 import { Card } from "@/components/ui/card/Card";
-import { useMessageThreads, useSendMessage, useThreadMessages } from "@/hooks/queries/useMessages";
+import {
+  useDeleteThread,
+  useMessageThreads,
+  useSendMessage,
+  useThreadMessages,
+} from "@/hooks/queries/useMessages";
 import { formatRelative } from "@/lib/date";
 import { appRoutes } from "@/config/routes/app.routes";
 import { useAppStore } from "@/store/main.store";
 import { selectUser } from "@/store/selectors/auth.selectors";
+import { Modal } from "@/components/ui/modal/Modal";
+import { Button } from "@/components/ui/button/Button";
 
 export function MessagesPage({ thread: initialThread }: { thread?: string }) {
   const user = useAppStore(selectUser);
@@ -34,6 +41,32 @@ export function MessagesPage({ thread: initialThread }: { thread?: string }) {
   const { data: messageData } = useThreadMessages(activeThread?.id);
   const messages = messageData?.items ?? [];
   const { mutate: sendMessage } = useSendMessage();
+  const { mutate: deleteThread, isPending: deletingThread } = useDeleteThread();
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(event.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [menuOpen]);
+
+  const handleDeleteThread = () => {
+    if (!activeThread?.id) return;
+    deleteThread(activeThread.id, {
+      onSuccess: () => {
+        setDeleteOpen(false);
+        setActiveThreadId("");
+        setShowChatOnMobile(false);
+      },
+    });
+  };
 
   if (!isLoggedIn) {
     return (
@@ -147,9 +180,31 @@ export function MessagesPage({ thread: initialThread }: { thread?: string }) {
                 <p className="text-[11px] text-muted-foreground">Property lead discussion</p>
               </div>
             </div>
-            <button className="p-1.5 hover:bg-surface-muted rounded-full text-muted-foreground hover:text-foreground transition">
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
+            <div className="relative" ref={menuRef}>
+              <button
+                aria-label="Conversation actions"
+                onClick={() => setMenuOpen((v) => !v)}
+                disabled={!activeThread?.id}
+                className="p-1.5 hover:bg-surface-muted rounded-full text-muted-foreground hover:text-foreground transition disabled:opacity-50"
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
+              {menuOpen && activeThread?.id ? (
+                <div className="absolute right-0 top-full mt-1 z-20 w-48 rounded-xl border border-surface-border bg-surface p-1 shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setDeleteOpen(true);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[12px] font-medium text-danger hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete conversation
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
 
           {/* Active Messages Area */}
@@ -204,6 +259,36 @@ export function MessagesPage({ thread: initialThread }: { thread?: string }) {
         </div>
 
       </Card>
+      <Modal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete conversation?"
+        mobilePosition="center"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            This permanently removes all messages in this conversation. This
+            action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(false)}
+              className="rounded-full border border-surface-border px-4 py-2 text-xs font-semibold text-foreground hover:bg-surface-muted"
+            >
+              Cancel
+            </button>
+            <Button
+              type="button"
+              variant="danger"
+              loading={deletingThread}
+              onClick={handleDeleteThread}
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -8,6 +8,14 @@ import type { Post } from "@/types";
 
 type FeedPages = { pages: Post[][]; pageParams: unknown[] };
 
+function applySave(p: Post, saved: boolean): Post {
+  return {
+    ...p,
+    saved: !saved,
+    saveCount: (p.saveCount ?? 0) + (saved ? -1 : 1),
+  };
+}
+
 export function useSavePost() {
   const qc = useQueryClient();
 
@@ -16,23 +24,36 @@ export function useSavePost() {
       saved ? postService.unsave(id) : postService.save(id),
     onMutate: async ({ id, saved }) => {
       await qc.cancelQueries({ queryKey: queryKeys.feed.all });
-      const prev = qc.getQueryData<FeedPages>(queryKeys.feed.list());
+      await qc.cancelQueries({ queryKey: queryKeys.posts.all });
+      const prevFeed = qc.getQueryData<FeedPages>(queryKeys.feed.list());
 
-      if (prev) {
+      if (prevFeed) {
         qc.setQueryData<FeedPages>(queryKeys.feed.list(), {
-          ...prev,
-          pages: prev.pages.map((page) =>
+          ...prevFeed,
+          pages: prevFeed.pages.map((page) =>
             page.map((post) =>
-              post.id === id ? { ...post, saved: !saved } : post
-            )
+              post.id === id ? applySave(post, saved) : post,
+            ),
           ),
         });
       }
-      return { prev };
+      const prevPostLists = qc.getQueriesData<Post[]>({
+        queryKey: queryKeys.posts.all,
+      });
+      qc.setQueriesData<Post[]>({ queryKey: queryKeys.posts.all }, (old) => {
+        if (!Array.isArray(old)) return old;
+        return old.map((p) => (p.id === id ? applySave(p, saved) : p));
+      });
+      return { prevFeed, prevPostLists };
     },
     onError: (err, _variables, context) => {
-      if (context?.prev) {
-        qc.setQueryData(queryKeys.feed.list(), context.prev);
+      if (context?.prevFeed) {
+        qc.setQueryData(queryKeys.feed.list(), context.prevFeed);
+      }
+      if (context?.prevPostLists) {
+        for (const [key, data] of context.prevPostLists) {
+          qc.setQueryData(key, data);
+        }
       }
       uiActions.error("Action failed", err.message);
     },
