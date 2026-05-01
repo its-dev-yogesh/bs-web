@@ -18,10 +18,12 @@ function patchPost(pages: FeedPages, postId: string, fn: (p: Post) => Post) {
 }
 
 function applyLike(p: Post, liked: boolean): Post {
+  const current = typeof p.likeCount === "number" && Number.isFinite(p.likeCount) ? p.likeCount : 0;
+  const next = current + (liked ? -1 : 1);
   return {
     ...p,
     liked: !liked,
-    likeCount: p.likeCount + (liked ? -1 : 1),
+    likeCount: Math.max(0, next),
   };
 }
 
@@ -34,13 +36,18 @@ export function useLikePost() {
     onMutate: async ({ id, liked }) => {
       await qc.cancelQueries({ queryKey: queryKeys.feed.all });
       await qc.cancelQueries({ queryKey: queryKeys.posts.all });
-      const prevFeed = qc.getQueryData<FeedPages>(queryKeys.feed.list());
-      if (prevFeed) {
-        qc.setQueryData<FeedPages>(
-          queryKeys.feed.list(),
-          patchPost(prevFeed, id, (p) => applyLike(p, liked)),
-        );
-      }
+      // Match every feed query (the key includes filters like excludeUserId)
+      // by prefix instead of an exact lookup.
+      const prevFeeds = qc.getQueriesData<FeedPages>({
+        queryKey: queryKeys.feed.all,
+      });
+      qc.setQueriesData<FeedPages>(
+        { queryKey: queryKeys.feed.all },
+        (old) => {
+          if (!old || !Array.isArray(old.pages)) return old;
+          return patchPost(old, id, (p) => applyLike(p, liked));
+        },
+      );
       const prevPostLists = qc.getQueriesData<Post[]>({
         queryKey: queryKeys.posts.all,
       });
@@ -48,10 +55,14 @@ export function useLikePost() {
         if (!Array.isArray(old)) return old;
         return old.map((p) => (p.id === id ? applyLike(p, liked) : p));
       });
-      return { prevFeed, prevPostLists };
+      return { prevFeeds, prevPostLists };
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prevFeed) qc.setQueryData(queryKeys.feed.list(), ctx.prevFeed);
+      if (ctx?.prevFeeds) {
+        for (const [key, data] of ctx.prevFeeds) {
+          qc.setQueryData(key, data);
+        }
+      }
       if (ctx?.prevPostLists) {
         for (const [key, data] of ctx.prevPostLists) {
           qc.setQueryData(key, data);

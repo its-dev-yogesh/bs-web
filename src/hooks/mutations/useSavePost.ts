@@ -9,10 +9,12 @@ import type { Post } from "@/types";
 type FeedPages = { pages: Post[][]; pageParams: unknown[] };
 
 function applySave(p: Post, saved: boolean): Post {
+  const current = typeof p.saveCount === "number" && Number.isFinite(p.saveCount) ? p.saveCount : 0;
+  const next = current + (saved ? -1 : 1);
   return {
     ...p,
     saved: !saved,
-    saveCount: (p.saveCount ?? 0) + (saved ? -1 : 1),
+    saveCount: Math.max(0, next),
   };
 }
 
@@ -25,18 +27,25 @@ export function useSavePost() {
     onMutate: async ({ id, saved }) => {
       await qc.cancelQueries({ queryKey: queryKeys.feed.all });
       await qc.cancelQueries({ queryKey: queryKeys.posts.all });
-      const prevFeed = qc.getQueryData<FeedPages>(queryKeys.feed.list());
-
-      if (prevFeed) {
-        qc.setQueryData<FeedPages>(queryKeys.feed.list(), {
-          ...prevFeed,
-          pages: prevFeed.pages.map((page) =>
-            page.map((post) =>
-              post.id === id ? applySave(post, saved) : post,
+      // Match every feed query (the key includes filters like excludeUserId)
+      // by prefix instead of an exact lookup.
+      const prevFeeds = qc.getQueriesData<FeedPages>({
+        queryKey: queryKeys.feed.all,
+      });
+      qc.setQueriesData<FeedPages>(
+        { queryKey: queryKeys.feed.all },
+        (old) => {
+          if (!old || !Array.isArray(old.pages)) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) =>
+              page.map((post) =>
+                post.id === id ? applySave(post, saved) : post,
+              ),
             ),
-          ),
-        });
-      }
+          };
+        },
+      );
       const prevPostLists = qc.getQueriesData<Post[]>({
         queryKey: queryKeys.posts.all,
       });
@@ -44,11 +53,13 @@ export function useSavePost() {
         if (!Array.isArray(old)) return old;
         return old.map((p) => (p.id === id ? applySave(p, saved) : p));
       });
-      return { prevFeed, prevPostLists };
+      return { prevFeeds, prevPostLists };
     },
     onError: (err, _variables, context) => {
-      if (context?.prevFeed) {
-        qc.setQueryData(queryKeys.feed.list(), context.prevFeed);
+      if (context?.prevFeeds) {
+        for (const [key, data] of context.prevFeeds) {
+          qc.setQueryData(key, data);
+        }
       }
       if (context?.prevPostLists) {
         for (const [key, data] of context.prevPostLists) {

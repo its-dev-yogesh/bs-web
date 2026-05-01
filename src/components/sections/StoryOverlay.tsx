@@ -1,17 +1,31 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
+  Eye,
   FileText,
+  Heart,
   MessageSquare,
   Trash2,
   UserCircle,
   X,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar/Avatar";
-import { formatStoryRelative, type Story } from "@/lib/stories";
+import {
+  formatStoryRelative,
+  getStoredStoryById,
+  getStoryLikeCount,
+  getStoryViewCount,
+  isStoryLikedBy,
+  recordStoryView,
+  toggleStoryLike,
+  type Story,
+} from "@/lib/stories";
+import { useAppStore } from "@/store/main.store";
+import { selectUser } from "@/store/selectors/auth.selectors";
+import { StoryViewersSheet } from "./StoryViewersSheet";
 
 const STORY_DEFAULT_DURATION_MS = 5000;
 
@@ -56,7 +70,56 @@ export function StoryOverlay({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [viewersOpen, setViewersOpen] = useState(false);
+  /** Bumps every time the local story changes so view/like counts re-read
+   *  from the latest localStorage entry. */
+  const [engagementTick, setEngagementTick] = useState(0);
   const isVideo = story?.mediaType === "video";
+
+  const viewer = useAppStore(selectUser);
+  const viewerId = String(viewer?._id ?? viewer?.id ?? "");
+
+  /** Read the persisted version after each view/like — `stories` prop is a
+   *  stale snapshot from the parent. */
+  const liveStory = useMemo<Story | undefined>(() => {
+    if (!story) return story;
+    void engagementTick;
+    return getStoredStoryById(story.id) ?? story;
+  }, [story, engagementTick]);
+
+  /** Auto-record a view when a non-own story comes into focus. Skip if the
+   *  viewer is the story author or not signed in. */
+  useEffect(() => {
+    if (!story || isOwnStory || !viewerId) return;
+    if (story.userId === viewerId) return;
+    recordStoryView(story.id, {
+      userId: viewerId,
+      name: viewer?.name,
+      username: viewer?.username,
+      avatarUrl: viewer?.avatarUrl,
+    });
+    setEngagementTick((t) => t + 1);
+  }, [story, isOwnStory, viewerId, viewer?.name, viewer?.username, viewer?.avatarUrl]);
+
+  /** Pause auto-advance when the viewers sheet is open. */
+  useEffect(() => {
+    if (viewersOpen) setPaused(true);
+  }, [viewersOpen]);
+
+  const liked = liveStory ? isStoryLikedBy(liveStory, viewerId) : false;
+  const viewCount = liveStory ? getStoryViewCount(liveStory) : 0;
+  const likeCount = liveStory ? getStoryLikeCount(liveStory) : 0;
+
+  const handleToggleLike = () => {
+    if (!story || !viewerId) return;
+    toggleStoryLike(story.id, {
+      userId: viewerId,
+      name: viewer?.name,
+      username: viewer?.username,
+      avatarUrl: viewer?.avatarUrl,
+    });
+    setEngagementTick((t) => t + 1);
+  };
 
   /** Lock body scroll, close on Escape, advance on arrow keys. */
   useEffect(() => {
@@ -272,8 +335,30 @@ export function StoryOverlay({
               {story.content}
             </p>
           ) : null}
+
+          {isOwnStory ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setViewersOpen(true);
+              }}
+              className="flex items-center gap-2 rounded-full bg-black/40 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm hover:bg-black/60"
+            >
+              <Eye className="h-4 w-4" />
+              <span>{viewCount}</span>
+              {likeCount > 0 ? (
+                <>
+                  <span className="opacity-50">·</span>
+                  <Heart className="h-3.5 w-3.5 fill-rose-500 text-rose-500" />
+                  <span>{likeCount}</span>
+                </>
+              ) : null}
+            </button>
+          ) : null}
+
           {showActions ? (
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               {onViewProfile ? (
                 <button
                   type="button"
@@ -300,9 +385,61 @@ export function StoryOverlay({
                   Message
                 </button>
               ) : null}
+              {viewerId ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleLike();
+                  }}
+                  aria-label={liked ? "Unlike story" : "Like story"}
+                  aria-pressed={liked}
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border backdrop-blur-sm transition ${
+                    liked
+                      ? "border-rose-500/80 bg-rose-500/20 text-rose-400"
+                      : "border-white/60 bg-white/10 text-white hover:bg-white/20"
+                  }`}
+                >
+                  <Heart
+                    className={`h-5 w-5 transition-transform ${liked ? "scale-110 fill-rose-500 text-rose-500" : ""}`}
+                  />
+                </button>
+              ) : null}
+            </div>
+          ) : viewerId ? (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleLike();
+                }}
+                aria-label={liked ? "Unlike story" : "Like story"}
+                aria-pressed={liked}
+                className={`flex h-10 w-10 items-center justify-center rounded-full border backdrop-blur-sm transition ${
+                  liked
+                    ? "border-rose-500/80 bg-rose-500/20 text-rose-400"
+                    : "border-white/60 bg-white/10 text-white hover:bg-white/20"
+                }`}
+              >
+                <Heart
+                  className={`h-5 w-5 transition-transform ${liked ? "scale-110 fill-rose-500 text-rose-500" : ""}`}
+                />
+              </button>
             </div>
           ) : null}
         </div>
+
+        {isOwnStory ? (
+          <StoryViewersSheet
+            open={viewersOpen}
+            onClose={() => {
+              setViewersOpen(false);
+              setPaused(false);
+            }}
+            viewers={liveStory?.viewers ?? []}
+          />
+        ) : null}
       </div>
     </div>
   );

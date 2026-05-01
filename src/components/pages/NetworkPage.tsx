@@ -93,6 +93,9 @@ export function NetworkPage() {
     username?: string;
     headline?: string;
     avatarUrl?: string;
+    mutualCount?: number;
+    pendingIncoming?: boolean;
+    isConnected?: boolean;
   }
 
   return (
@@ -177,8 +180,9 @@ export function NetworkPage() {
               </p>
             ) : (myConnections?.items?.length ?? 0) === 0 ? (
               <p className="p-4 text-sm text-muted-foreground">
-                No accepted connections yet. Send requests from here or the feed—each broker must accept before
-                they show up in this list.
+                You&apos;re not following anyone yet. Tap{" "}
+                <span className="font-semibold text-foreground">+ Follow</span> on the
+                brokers below to start building your feed.
               </p>
             ) : null}
           </div>
@@ -203,7 +207,9 @@ export function NetworkPage() {
                   name={u.name ?? u.username ?? "Broker"}
                   role={u.headline ?? "Real Estate Broker"}
                   avatar={u.avatarUrl ?? `https://i.pravatar.cc/150?u=${idx}`}
-                  mutuals={idx + 2}
+                  mutuals={u.mutualCount ?? 0}
+                  followsMe={Boolean(u.pendingIncoming)}
+                  isConnected={Boolean(u.isConnected)}
                   isLoggedIn={isLoggedIn}
                   onStoryClick={(stories) => {
                     setViewerStories(stories);
@@ -322,6 +328,8 @@ function SuggestionGridItem({
   role,
   avatar,
   mutuals,
+  followsMe,
+  isConnected,
   isLoggedIn,
   onStoryClick,
 }: {
@@ -331,6 +339,8 @@ function SuggestionGridItem({
   role: string;
   avatar: string;
   mutuals: number;
+  followsMe: boolean;
+  isConnected: boolean;
   isLoggedIn: boolean;
   onStoryClick?: (stories: Story[]) => void;
 }) {
@@ -393,20 +403,30 @@ function SuggestionGridItem({
           </Link>
         )}
       </div>
-      <div className="px-3 mt-3 flex-1 flex flex-col min-h-[90px]">
+      <div className="px-3 mt-3 flex-1 flex flex-col min-h-[110px]">
         <Link href={appRoutes.profile(username)} className="font-bold text-[15px] text-foreground hover:underline">
           {name}
         </Link>
+        <p className="text-[11px] text-muted-foreground -mt-0.5">@{username}</p>
         <p className="text-[12px] text-muted-foreground line-clamp-2 mt-1">{role}</p>
+        {followsMe ? (
+          <span className="mt-1 inline-block self-center rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand">
+            Follows you
+          </span>
+        ) : null}
         <p className="text-[11px] text-gray-400 font-medium mt-auto mb-2">
-          {mutuals > 0 ? `${mutuals} mutual connections` : "No mutual connections"}
+          {mutuals > 0
+            ? `${mutuals} mutual ${mutuals === 1 ? "connection" : "connections"}`
+            : "No mutual connections"}
         </p>
       </div>
       {isLoggedIn ? (
         <FollowOrConnectButton
           targetUserId={userId}
           variant="primary"
-          label="Connect"
+          label={followsMe ? "Follow back" : "+ Follow"}
+          serverConnected={isConnected}
+          serverPendingIncoming={followsMe}
           className="w-[85%] py-1.5 rounded-full text-[13px] mt-2"
         />
       ) : (

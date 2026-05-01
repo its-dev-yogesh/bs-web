@@ -5,12 +5,13 @@ export type Notification = {
   id: string;
   type:
     | "connection_request"
+    | "follow"
     | "post_like"
     | "comment"
     | "mention"
     | "message"
     | "requirement_match";
-  actor: { id: string; name: string; avatarUrl?: string };
+  actor: { id: string; name: string; username?: string; avatarUrl?: string };
   read: boolean;
   link?: string;
   createdAt: string;

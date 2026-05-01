@@ -41,4 +41,6 @@ export type PublicProfile = User & {
   pendingIncoming?: boolean;
   /** ID of the connection request when `pendingIncoming` (for accept/decline on profile). */
   pendingRequestId?: string;
+  /** Number of mutual followers (people the viewer follows who also follow this user). */
+  mutualCount?: number;
 };

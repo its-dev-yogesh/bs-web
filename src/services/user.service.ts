@@ -5,6 +5,10 @@ import type { PublicProfile, User } from "@/types";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// chanakya-astra users are identified by 24-char hex Mongo ObjectIds.
+const MONGO_ID_REGEX = /^[0-9a-f]{24}$/i;
+const looksLikeUserId = (slug: string) =>
+  UUID_REGEX.test(slug) || MONGO_ID_REGEX.test(slug);
 
 export const userService = {
   async getById(id: string): Promise<User | null> {
@@ -16,24 +20,26 @@ export const userService = {
 
   async getByUsername(username: string): Promise<PublicProfile> {
     const slug = String(username ?? "").trim();
-    const { data } = await api.get<PublicProfile | null>(
-      apiRoutes.users.byUsername(slug),
-    );
-    if (data) return data;
-
-    // Feed posts can carry author id (UUID) instead of username; resolve to public profile.
-    if (!UUID_REGEX.test(slug)) {
+    // chanakya-astra users may not have a username — if the slug looks like
+    // an id, skip the username lookup and resolve directly via /users/:id.
+    if (!looksLikeUserId(slug)) {
+      const { data } = await api.get<PublicProfile | null>(
+        apiRoutes.users.byUsername(slug),
+      );
+      if (data) return data;
       throw new Error("Profile not found");
     }
     const byId = await this.getById(slug);
-    const resolvedUsername = String(byId?.username ?? "").trim();
+    if (!byId) throw new Error("Profile not found");
+    const resolvedUsername = String(byId.username ?? "").trim();
     if (!resolvedUsername) {
-      throw new Error("Profile not found");
+      // No username on the user record — return the byId payload directly.
+      return byId as PublicProfile;
     }
     const { data: resolved } = await api.get<PublicProfile>(
       apiRoutes.users.byUsername(resolvedUsername),
     );
-    return resolved;
+    return resolved ?? (byId as PublicProfile);
   },
 
   async list(): Promise<User[]> {

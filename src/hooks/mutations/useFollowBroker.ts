@@ -13,6 +13,8 @@ export function useFollowBroker() {
     mutationFn: (userId: string) => connectionService.sendRequest(userId),
     onSuccess: (_, targetUserId) => {
       const tid = String(targetUserId).trim();
+      // Instagram-style instant follow: drop the user from suggestions and
+      // mark the cached profile as connected straight away.
       qc.setQueryData(
         queryKeys.connections.suggestions(),
         (old: PublicProfile[] | undefined) =>
@@ -28,8 +30,11 @@ export function useFollowBroker() {
           if (id !== tid) return old;
           return {
             ...old,
-            pendingOutgoing: true,
-            isPendingRequest: true,
+            isConnected: true,
+            pendingOutgoing: false,
+            // If they followed us first, we've now reciprocated.
+            pendingIncoming: false,
+            isPendingRequest: false,
           };
         },
       );
@@ -37,10 +42,11 @@ export function useFollowBroker() {
       qc.invalidateQueries({ queryKey: queryKeys.profile.all });
       qc.invalidateQueries({ queryKey: queryKeys.feed.all });
       qc.invalidateQueries({ queryKey: queryKeys.stories.all });
-      uiActions.success("Connection request sent");
+      qc.invalidateQueries({ queryKey: queryKeys.notifications.all });
+      uiActions.success("Following");
     },
     onError: (err: Error) => {
-      uiActions.error("Couldn't send request", err.message);
+      uiActions.error("Couldn't follow", err.message);
     },
   });
 }

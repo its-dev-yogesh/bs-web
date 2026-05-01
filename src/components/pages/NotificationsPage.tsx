@@ -15,12 +15,14 @@ import { Avatar } from "@/components/ui/avatar/Avatar";
 import { Card } from "@/components/ui/card/Card";
 import { formatRelative } from "@/lib/date";
 import { cn } from "@/lib/cn";
-import { Bell, Sparkles, MessageSquare, Users, FileText, Loader2 } from "lucide-react";
+import { Bell, Sparkles, MessageSquare, Users, FileText, Loader2, UserPlus } from "lucide-react";
 import type { Notification } from "@/services/notification.service";
 import { getNotificationHref } from "@/lib/notification-links";
+import { FollowOrConnectButton } from "@/components/connect/FollowOrConnectButton";
 
 const labels: Record<Notification["type"], string> = {
   connection_request: "sent you a broker connection request",
+  follow: "started following you",
   post_like: "is interested in your property post",
   comment: "commented on your listing",
   mention: "mentioned you",
@@ -42,7 +44,7 @@ function matchesFilter(n: Notification, f: FilterKey): boolean {
         n.type === "requirement_match"
       );
     case "network":
-      return n.type === "connection_request";
+      return n.type === "connection_request" || n.type === "follow";
     case "messages":
       return n.type === "message";
     default:
@@ -201,6 +203,8 @@ function NotificationRow({
     switch (type) {
       case "post_like":
         return <Sparkles className="w-4 h-4 text-orange-500" />;
+      case "follow":
+        return <UserPlus className="w-4 h-4 text-blue-500" />;
       case "connection_request":
         return <Users className="w-4 h-4 text-blue-500" />;
       case "message":
@@ -215,13 +219,21 @@ function NotificationRow({
   };
 
   const href = getNotificationHref(item);
+  const isFollow = item.type === "follow";
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
       className={cn(
-        "flex w-full items-start justify-between p-4 text-left hover:bg-surface-muted transition gap-3",
+        "flex w-full items-start justify-between p-4 text-left hover:bg-surface-muted transition gap-3 cursor-pointer",
         !item.read && "bg-blue-50/40 border-l-4 border-brand dark:bg-blue-950/20",
       )}
     >
@@ -241,13 +253,25 @@ function NotificationRow({
           <span className="text-[12px] text-muted-foreground mt-1 block">
             {formatRelative(item.createdAt)}
           </span>
-          {href ? (
+          {!isFollow && href ? (
             <span className="text-[11px] font-semibold text-brand mt-1 inline-block">
               Open →
             </span>
           ) : null}
         </div>
       </div>
-    </button>
+      {isFollow && item.actor.id ? (
+        <div onClick={(e) => e.stopPropagation()}>
+          <FollowOrConnectButton
+            targetUserId={item.actor.id}
+            variant="primary"
+            label="Follow back"
+            // The actor follows me, so this is always a follow-back affordance.
+            serverPendingIncoming
+            className="text-[12px] px-3 py-1"
+          />
+        </div>
+      ) : null}
+    </div>
   );
 }

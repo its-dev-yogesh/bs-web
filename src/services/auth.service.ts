@@ -26,31 +26,50 @@ export type RefreshResponse = {
   expires_in: number;
 };
 
+// astra-service uses `phoneNumber`; UI keeps the legacy `phone` field name.
+// These helpers translate at the network boundary so the forms don't change.
+function toBackend<T extends { phone?: string }>(input: T) {
+  const { phone, ...rest } = input as T & { phone?: string };
+  return phone === undefined ? rest : { ...rest, phoneNumber: phone };
+}
+function fromBackend<T extends { phoneNumber?: string }>(input: T) {
+  const { phoneNumber, ...rest } = input as T & { phoneNumber?: string };
+  return phoneNumber === undefined
+    ? (input as unknown as T & { phone?: string })
+    : ({ ...rest, phone: phoneNumber } as T & { phone: string });
+}
+
 export const authService = {
   async register(input: RegisterPayload): Promise<User> {
-    const { data } = await api.post<User>(apiRoutes.users.create, input);
+    const { data } = await api.post<User>(
+      apiRoutes.users.create,
+      toBackend(input),
+    );
     return data;
   },
 
   async login(input: LoginInput): Promise<OtpChallenge> {
-    const { data } = await api.post<OtpChallenge>(apiRoutes.auth.login, input);
-    return data;
+    const { data } = await api.post<{ phoneNumber: string; message: string }>(
+      apiRoutes.auth.login,
+      toBackend(input),
+    );
+    return fromBackend(data) as OtpChallenge;
   },
 
   async verifyOtp(input: VerifyOtpInput): Promise<AuthSession> {
     const { data } = await api.post<AuthSession>(
       apiRoutes.auth.verifyOtp,
-      input,
+      toBackend(input),
     );
     return data;
   },
 
   async resendOtp(input: ResendOtpInput): Promise<OtpChallenge> {
-    const { data } = await api.post<OtpChallenge>(
+    const { data } = await api.post<{ phoneNumber: string; message: string }>(
       apiRoutes.auth.resendOtp,
-      input,
+      toBackend(input),
     );
-    return data;
+    return fromBackend(data) as OtpChallenge;
   },
 
   async logout(): Promise<void> {

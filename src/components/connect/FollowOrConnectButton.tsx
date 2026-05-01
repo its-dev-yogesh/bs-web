@@ -32,7 +32,7 @@ export function FollowOrConnectButton({
   variant = "outline",
   label = "+ Follow",
   serverConnected = false,
-  serverPendingOutgoing = false,
+  serverPendingOutgoing: _serverPendingOutgoing = false,
   serverPendingIncoming = false,
 }: Props) {
   const router = useRouter();
@@ -40,15 +40,15 @@ export function FollowOrConnectButton({
   const myId = me?._id ?? me?.id;
   const { mutate: followMutate, isPending: following } = useFollowBroker();
   const { mutate: unfollowMutate, isPending: unfollowing } = useUnfollowBroker();
-  const [sent, setSent] = useState(false);
   const [connected, setConnected] = useState(serverConnected);
+  const [followsMe, setFollowsMe] = useState(serverPendingIncoming);
 
   useEffect(() => {
     setConnected(serverConnected);
   }, [serverConnected]);
   useEffect(() => {
-    if (serverPendingOutgoing) setSent(true);
-  }, [serverPendingOutgoing]);
+    setFollowsMe(serverPendingIncoming);
+  }, [serverPendingIncoming]);
 
   const same =
     Boolean(targetUserId && myId) && String(myId) === String(targetUserId);
@@ -62,16 +62,13 @@ export function FollowOrConnectButton({
         ? "rounded-full border border-brand px-3 py-1 text-[12px] font-bold text-brand transition hover:bg-brand-soft disabled:opacity-50"
         : "mt-1 rounded-full border border-muted-foreground/60 px-3 py-0.5 text-[12px] font-bold text-muted-foreground hover:bg-surface-muted transition disabled:opacity-70";
 
-  /** Connected → show Unfollow that disconnects on click. */
+  /** Connected (= Instagram "Following") → tapping unfollows. */
   if (connected) {
     const onUnfollow = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
       unfollowMutate(targetUserId, {
-        onSuccess: () => {
-          setConnected(false);
-          setSent(false);
-        },
+        onSuccess: () => setConnected(false),
       });
     };
     return (
@@ -81,20 +78,7 @@ export function FollowOrConnectButton({
         onClick={onUnfollow}
         className={cn(variantClass, className)}
       >
-        {unfollowing ? "…" : "Unfollow"}
-      </button>
-    );
-  }
-
-  /** Pending request already sent: show neutral "Requested" state. */
-  if (sent || serverPendingOutgoing) {
-    return (
-      <button
-        type="button"
-        disabled
-        className={cn(variantClass, "opacity-60 cursor-default", className)}
-      >
-        Requested
+        {unfollowing ? "…" : "Following"}
       </button>
     );
   }
@@ -107,11 +91,15 @@ export function FollowOrConnectButton({
       return;
     }
     followMutate(targetUserId, {
-      onSuccess: () => setSent(true),
+      onSuccess: () => {
+        setConnected(true);
+        setFollowsMe(false);
+      },
     });
   };
 
-  const finalLabel = serverPendingIncoming ? "Follow Back" : label;
+  /** "Follow back" CTA when the target follows the viewer first. */
+  const finalLabel = followsMe ? "Follow back" : label;
 
   return (
     <button

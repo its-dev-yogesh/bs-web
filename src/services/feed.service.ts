@@ -48,35 +48,50 @@ function mapListingToFeedPost(p: ListingItem): Post {
 async function fetchPublicFeedPosts(params: {
   skip?: number;
   limit?: number;
+  excludeUserId?: string;
 }): Promise<Post[]> {
   const listings = await postService.list({
     status: "active",
     limit: params.limit,
     skip: params.skip,
+    exclude_user_id: params.excludeUserId,
   });
   return listings.map(mapListingToFeedPost);
 }
 
 export const feedService = {
+  /** `excludeUserId` is the viewer's id — passed in by useFeed so the home
+   *  feed never shows the viewer's own posts. */
   async getHome(
-    params: { skip?: number; limit?: number } = {},
+    params: { skip?: number; limit?: number; excludeUserId?: string } = {},
   ): Promise<Post[]> {
     const token =
       typeof window !== "undefined"
         ? storage.get<string>(STORAGE_KEYS.ACCESS_TOKEN)
         : null;
+    const myId = params.excludeUserId;
 
     if (!token) {
-      return fetchPublicFeedPosts(params);
+      return fetchPublicFeedPosts({ ...params, excludeUserId: myId });
     }
 
     try {
       const { data } = await api.get<BackendFeedItem[]>(
         apiRoutes.feed.home,
-        { params },
+        { params: { skip: params.skip, limit: params.limit } },
       );
       const list = Array.isArray(data) ? data : [];
-      return list.map((item) => ({
+      /** Personalized feed depends on community-queues fan-out. While queues
+       *  are disabled (or for new users with no follows yet), the feed is
+       *  empty even though there are public posts to browse. Fall back to
+       *  the public listing (with own posts filtered out) so the home feed
+       *  is never silently empty. */
+      if (list.length === 0) {
+        return fetchPublicFeedPosts({ ...params, excludeUserId: myId });
+      }
+      return list
+        .filter((item) => !myId || String(item.post.user_id ?? "") !== myId)
+        .map((item) => ({
         id: item.post._id,
         type: item.post.type,
         author: authorFromUserId(item.post.user_id),
@@ -91,10 +106,10 @@ export const feedService = {
           url: m.url,
           type: m.type ?? "image",
         })),
-        likeCount: item.likes_count,
-        commentCount: item.comments_count,
-        repostCount: item.inquiries_count,
-        saveCount: item.saves_count,
+        likeCount: item.likes_count ?? 0,
+        commentCount: item.comments_count ?? 0,
+        repostCount: item.inquiries_count ?? 0,
+        saveCount: item.saves_count ?? 0,
         liked:
           item.user_reaction === "like" || item.user_reaction === "interested",
         reposted: false,
@@ -135,7 +150,7 @@ export const feedService = {
     } catch (error) {
       // JWT missing or expired: use public posts (same browse path as anonymous users).
       if (!(error instanceof ApiError) || !error.isUnauthorized) throw error;
-      return fetchPublicFeedPosts(params);
+      return fetchPublicFeedPosts({ ...params, excludeUserId: myId });
     }
   },
 };

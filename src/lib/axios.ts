@@ -1,10 +1,11 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
-import { env } from "./env";
 import { storage, STORAGE_KEYS } from "./storage";
 import { toApiError } from "./api-error";
 
 export const api = axios.create({
-  baseURL: env.NEXT_PUBLIC_API_BASE_URL,
+  // Use the Next.js rewrite at /api/* so requests stay same-origin and avoid
+  // CORS issues with `withCredentials: true`. See next.config.ts.
+  baseURL: "/api",
   withCredentials: true,
   timeout: 20_000,
   headers: {
@@ -38,15 +39,33 @@ const resolvePending = (token: string | null) => {
 function isAuthEndpoint(url?: string) {
   if (!url) return false;
   return (
-    url.includes("/auth/login") ||
-    url.includes("/auth/verify-otp") ||
-    url.includes("/auth/resend-otp") ||
-    url.includes("/auth/refresh")
+    url.includes("/community-auth/login") ||
+    url.includes("/community-auth/verify-otp") ||
+    url.includes("/community-auth/verify-registration") ||
+    url.includes("/community-auth/resend-otp") ||
+    url.includes("/community-auth/refresh") ||
+    url.includes("/community-auth/register")
   );
 }
 
+// astra-service wraps every response in `{ status, message, data }` via a
+// global ResponseInterceptor. Unwrap here so callers see the raw payload.
+function unwrapAstraEnvelope(response: import("axios").AxiosResponse) {
+  const body = response.data;
+  if (
+    body &&
+    typeof body === "object" &&
+    !Array.isArray(body) &&
+    "status" in body &&
+    "data" in body
+  ) {
+    response.data = (body as { data: unknown }).data;
+  }
+  return response;
+}
+
 api.interceptors.response.use(
-  (response) => response,
+  (response) => unwrapAstraEnvelope(response),
   async (error: AxiosError) => {
     const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
     const status = error.response?.status;
@@ -82,10 +101,12 @@ api.interceptors.response.use(
     original._retry = true;
     isRefreshing = true;
     try {
-      const refreshResp = await axios.post<{ access_token: string }>(
-        `${env.NEXT_PUBLIC_API_BASE_URL}/auth/refresh`,
+      // Use the configured `api` instance so the response goes through
+      // unwrapAstraEnvelope. /community-auth/refresh is in isAuthEndpoint,
+      // so a 401 here won't recurse into another refresh attempt.
+      const refreshResp = await api.post<{ access_token: string }>(
+        "/community-auth/refresh",
         { refresh_token: refreshToken },
-        { headers: { "Content-Type": "application/json" }, withCredentials: true, timeout: 20000 },
       );
       const newToken = refreshResp.data?.access_token;
       if (!newToken) throw new Error("No refreshed access token");

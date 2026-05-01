@@ -28,7 +28,11 @@ export const useAppStore = create<AppState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         theme: state.theme,
-        // session is restored from /me query — only persist UI prefs.
+        // Persist the user record so a page refresh doesn't briefly blank
+        // out name/avatar while /me revalidates. /me on the chanakya-astra
+        // backend returns a partial payload (no `name`), so we rely on the
+        // persisted copy and merge new fields in via setUser.
+        user: state.user,
       }),
     },
   ),

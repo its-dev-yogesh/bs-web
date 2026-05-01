@@ -25,13 +25,6 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
   const { mutate, isPending } = useCreatePost();
   const isLoggedIn = Boolean(user?._id ?? user?.id);
   const [postType, setPostType] = useState<ComposerType>("listing");
-
-  /** Only explicit `type === "user"` is a client; missing type must not block listing (session/API quirks). */
-  const isClientAccount = user?.type === "user";
-
-  const selectedPostType: ComposerType = isClientAccount
-    ? "requirement"
-    : postType;
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
@@ -57,18 +50,9 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
   });
 
   const onSubmit = form.handleSubmit((values) => {
-    if (selectedPostType === "listing" && isClientAccount) {
-      uiActions.error(
-        "Only brokers can publish listings",
-        "Post a client requirement, or sign in with a broker account.",
-      );
-      return;
-    }
-
     /** Requirements are text-only — never carry media even if some was uploaded
      *  before switching post type. */
-    const sourceMediaUrls =
-      selectedPostType === "listing" ? mediaUrls : [];
+    const sourceMediaUrls = postType === "listing" ? mediaUrls : [];
     const mediaItems = sourceMediaUrls.map((url) => {
       const lower = url.toLowerCase();
       if (/\.(mp4|mov|webm|mkv|avi)(\?|$)/.test(lower)) {
@@ -82,10 +66,10 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
 
     mutate(
       {
-        postType: selectedPostType,
+        postType: postType,
         title:
           title.trim() ||
-          (selectedPostType === "listing"
+          (postType === "listing"
             ? "Property listing"
             : "Client requirement"),
         location: location.trim(),
@@ -101,13 +85,13 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
         config: config || undefined,
         amenities: amenities ? amenities.split(",").map(a => a.trim()).filter(Boolean) : [],
         // Listing specific
-        price: selectedPostType === "listing" ? (price ? Number(price) : undefined) : undefined,
-        listingType: selectedPostType === "listing" ? listingType : (listingType === "rent" ? "rent" : "buy"),
-        address: selectedPostType === "listing" ? (address || undefined) : undefined,
-        area_sqft: selectedPostType === "listing" ? (areaSqft ? Number(areaSqft) : undefined) : undefined,
+        price: postType === "listing" ? (price ? Number(price) : undefined) : undefined,
+        listingType: postType === "listing" ? listingType : (listingType === "rent" ? "rent" : "buy"),
+        address: postType === "listing" ? (address || undefined) : undefined,
+        area_sqft: postType === "listing" ? (areaSqft ? Number(areaSqft) : undefined) : undefined,
         // Requirement specific
-        budgetMin: selectedPostType === "requirement" ? (budgetMin ? Number(budgetMin) : undefined) : undefined,
-        budgetMax: selectedPostType === "requirement" ? (budgetMax ? Number(budgetMax) : undefined) : undefined,
+        budgetMin: postType === "requirement" ? (budgetMin ? Number(budgetMin) : undefined) : undefined,
+        budgetMax: postType === "requirement" ? (budgetMax ? Number(budgetMax) : undefined) : undefined,
       },
       {
         onSuccess: () => {
@@ -200,19 +184,12 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button
             type="button"
-            disabled={isClientAccount}
-            title={
-              isClientAccount
-                ? "Only broker accounts can publish property listings"
-                : undefined
-            }
             onClick={() => setPostType("listing")}
             className={cn(
               "rounded-lg border px-3 py-2 text-xs font-semibold transition",
-              selectedPostType === "listing"
+              postType === "listing"
                 ? "border-brand bg-brand-soft text-brand"
                 : "border-surface-border bg-surface text-muted-foreground",
-              isClientAccount && "cursor-not-allowed opacity-50",
             )}
           >
             Property Listing
@@ -222,7 +199,7 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
             onClick={() => setPostType("requirement")}
             className={cn(
               "rounded-lg border px-3 py-2 text-xs font-semibold transition",
-              selectedPostType === "requirement"
+              postType === "requirement"
                 ? "border-brand bg-brand-soft text-brand"
                 : "border-surface-border bg-surface text-muted-foreground",
             )}
@@ -247,7 +224,7 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder={selectedPostType === "listing" ? "Listing title (e.g. 3 BHK in Bhopal)" : "Requirement title (e.g. Need 2 BHK on rent)"}
+        placeholder={postType === "listing" ? "Listing title (e.g. 3 BHK in Bhopal)" : "Requirement title (e.g. Need 2 BHK on rent)"}
         className="h-10 w-full rounded-xl border border-surface-border bg-surface px-3 text-sm text-foreground outline-none focus:border-brand"
       />
       <input
@@ -264,7 +241,7 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl border border-surface-border bg-surface-muted/20">
-        {selectedPostType === "listing" ? (
+        {postType === "listing" ? (
           <>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Price</label>
@@ -334,7 +311,7 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
           />
         </div>
 
-        {selectedPostType === "listing" && (
+        {postType === "listing" && (
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Area (sq ft)</label>
             <input
@@ -372,7 +349,7 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
           </select>
         </div>
 
-        {selectedPostType === "listing" && (
+        {postType === "listing" && (
           <div className="sm:col-span-2 space-y-1">
             <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Full Address</label>
             <input
@@ -386,7 +363,7 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
 
         <div className="sm:col-span-2 space-y-1">
           <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">
-            {selectedPostType === "listing" ? "Amenities" : "Preferred Amenities"} (comma separated)
+            {postType === "listing" ? "Amenities" : "Preferred Amenities"} (comma separated)
           </label>
           <input
             value={amenities}
@@ -400,14 +377,14 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
         control={form.control}
         name="content"
         placeholder={
-          selectedPostType === "listing"
+          postType === "listing"
             ? "Describe property details, price, highlights..."
             : "Describe client budget, preferred area, and needs..."
         }
         rows={5}
         maxLength={POST_MAX_LENGTH}
       />
-      {selectedPostType === "listing" ? (
+      {postType === "listing" ? (
         <div className="space-y-2">
           <div className="rounded-xl border border-dashed border-surface-border p-3">
             <label className="text-xs font-semibold text-muted-foreground">
@@ -465,7 +442,7 @@ export function PostComposerForm({ onPosted }: { onPosted?: () => void }) {
       ) : null}
       <div className="flex justify-end">
         <Button type="submit" loading={isPending} disabled={!form.formState.isValid}>
-          Publish {selectedPostType === "listing" ? "listing" : "requirement"}
+          Publish {postType === "listing" ? "listing" : "requirement"}
         </Button>
       </div>
     </form>

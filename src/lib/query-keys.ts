@@ -13,6 +13,9 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.posts.all, "detail", id] as const,
     comments: (id: string) =>
       [...queryKeys.posts.all, "comments", id] as const,
+    reactions: (id: string) =>
+      [...queryKeys.posts.all, "reactions", id] as const,
+    saves: (id: string) => [...queryKeys.posts.all, "saves", id] as const,
   },
   profile: {
     all: ["profile"] as const,

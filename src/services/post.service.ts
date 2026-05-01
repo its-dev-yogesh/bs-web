@@ -4,6 +4,13 @@ import type { CreatePostPayload } from "@/schemas/post.schema";
 import type { Post } from "@/types";
 import { authorFromUserId } from "@/lib/author-display";
 
+export type RawPostAuthor = {
+  id?: string;
+  _id?: string;
+  name?: string;
+  username?: string;
+};
+
 export type RawPost = {
   _id: string;
   user_id: string;
@@ -21,12 +28,68 @@ export type RawPost = {
   comments_count?: number;
   user_reaction?: string | null;
   is_saved?: boolean;
+  /** Denormalized author info attached server-side. */
+  author?: RawPostAuthor;
 };
 
 type PostWithDetailsResponse = {
   post: RawPost;
   media?: Array<{ url?: string; type?: "image" | "video" | "document" }>;
+  author?: RawPostAuthor;
 };
+
+type RawEnrichedUser = {
+  user_id?: string;
+  name?: string;
+  username?: string;
+  avatarUrl?: string;
+  headline?: string;
+  type?: string;
+  createdAt?: string;
+};
+
+export type PostUserSummary = {
+  userId: string;
+  name?: string;
+  username?: string;
+  avatarUrl?: string;
+  headline?: string;
+  reactionType?: string;
+  createdAt?: string;
+};
+
+function mapEnrichedUser(u: RawEnrichedUser): PostUserSummary {
+  return {
+    userId: String(u.user_id ?? ""),
+    name: u.name,
+    username: u.username,
+    avatarUrl: u.avatarUrl,
+    headline: u.headline,
+    reactionType: u.type,
+    createdAt: u.createdAt,
+  };
+}
+
+/** Prefer the server-attached author info; fall back to the synthetic
+ *  user_id-based label for older payloads or missing joins. */
+function resolveAuthor(
+  user_id: string,
+  attached: RawPostAuthor | undefined,
+): { id: string; username: string; name?: string } {
+  if (attached) {
+    const id = String(attached.id ?? attached._id ?? user_id ?? "");
+    const username = String(attached.username ?? "").trim();
+    const name = String(attached.name ?? "").trim();
+    if (id && (username || name)) {
+      return {
+        id,
+        username: username || name,
+        name: name || username || undefined,
+      };
+    }
+  }
+  return authorFromUserId(user_id);
+}
 
 function mapPostWithDetails(res: PostWithDetailsResponse): Post {
   const p = res.post;
@@ -40,7 +103,7 @@ function mapPostWithDetails(res: PostWithDetailsResponse): Post {
   return {
     id: p._id,
     type: p.type,
-    author: authorFromUserId(p.user_id),
+    author: resolveAuthor(p.user_id, res.author ?? p.author),
     title: p.title,
     content: p.description ?? p.title ?? "",
     whatsappNumber: p.whatsapp_number,
@@ -63,7 +126,7 @@ function mapRawPost(raw: RawPost): Post {
   return {
     id: raw._id,
     type: raw.type,
-    author: authorFromUserId(raw.user_id),
+    author: resolveAuthor(raw.user_id, raw.author),
     title: raw.title,
     content: raw.description ?? raw.title ?? "",
     whatsappNumber: raw.whatsapp_number,
@@ -176,6 +239,8 @@ export const postService = {
   async list(params: {
     type?: "listing" | "requirement";
     user_id?: string;
+    /** Hide posts authored by this user (used by the home feed). */
+    exclude_user_id?: string;
     limit?: number;
     skip?: number;
     /** Published posts only — use on profile timelines */
@@ -208,6 +273,21 @@ export const postService = {
 
   async like(id: string): Promise<void> {
     await api.post(apiRoutes.posts.reactions(id), { type: "like" });
+  },
+
+  async listReactions(id: string): Promise<PostUserSummary[]> {
+    const { data } = await api.get<RawEnrichedUser[]>(
+      apiRoutes.posts.reactions(id),
+    );
+    return (Array.isArray(data) ? data : []).map(mapEnrichedUser);
+  },
+
+  /** Owner-only on the backend — non-owners get 403. */
+  async listSavers(id: string): Promise<PostUserSummary[]> {
+    const { data } = await api.get<RawEnrichedUser[]>(
+      apiRoutes.posts.saves(id),
+    );
+    return (Array.isArray(data) ? data : []).map(mapEnrichedUser);
   },
 
   async listMedia(

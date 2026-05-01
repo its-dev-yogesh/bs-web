@@ -35,6 +35,9 @@ import type { Post } from "@/types";
 import { useAppStore } from "@/store/main.store";
 import { selectUser } from "@/store/selectors/auth.selectors";
 import { usePostComments } from "@/hooks/queries/usePostComments";
+import { usePostReactionsList } from "@/hooks/queries/usePostReactionsList";
+import { usePostSavesList } from "@/hooks/queries/usePostSavesList";
+import { PostUserListModal } from "@/components/cards/PostUserListModal";
 import { useCreateComment } from "@/hooks/mutations/useCreateComment";
 import { useCommentLike } from "@/hooks/mutations/useCommentLike";
 import { useDeleteComment } from "@/hooks/mutations/useDeleteComment";
@@ -78,6 +81,8 @@ export function PostCard({ post }: { post: Post }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [reactionsOpen, setReactionsOpen] = useState(false);
+  const [saversOpen, setSaversOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const { data: comments = [], isLoading: loadingComments } = usePostComments(
@@ -85,11 +90,23 @@ export function PostCard({ post }: { post: Post }) {
     commentsOpen,
   );
 
+  const { data: reactionUsers, isLoading: loadingReactions } =
+    usePostReactionsList(post.id, reactionsOpen);
+  // Backend restricts to the post owner — only enable the query for them.
+  const { data: saverUsers, isLoading: loadingSavers } = usePostSavesList(
+    post.id,
+    saversOpen,
+  );
+
   const typeLabel =
     post.type === "requirement" ? "Client Requirement" : "Property Listing";
   const authorId = post.author.id;
-  const isOwnPost = Boolean(myId && authorId && myId === authorId);
-  const shouldResolveAuthor = !isOwnPost && Boolean(authorId);
+  // "me" is an optimistic-update placeholder from useCreatePost — treat as own.
+  const isOwnPost = Boolean(
+    authorId === "me" || (myId && authorId && myId === authorId),
+  );
+  const shouldResolveAuthor =
+    !isOwnPost && Boolean(authorId) && authorId !== "me";
   const { data: resolvedAuthor } = useQuery({
     queryKey: queryKeys.profile.byUsername(authorId ?? ""),
     queryFn: async () => userService.getById(authorId!),
@@ -473,7 +490,28 @@ export function PostCard({ post }: { post: Post }) {
         </div> */}
       </div>
 
-      <Stats post={post} />
+      <Stats
+        post={post}
+        onLikesClick={
+          (post.likeCount ?? 0) > 0 ? () => setReactionsOpen(true) : undefined
+        }
+        onCommentsClick={
+          (post.commentCount ?? 0) > 0
+            ? () => {
+                if (!isLoggedIn) {
+                  requireLogin();
+                  return;
+                }
+                setCommentsOpen(true);
+              }
+            : undefined
+        }
+        onSavesClick={
+          isOwnPost && (post.saveCount ?? 0) > 0
+            ? () => setSaversOpen(true)
+            : undefined
+        }
+      />
 
       <div className="flex items-center justify-between border-t border-surface-border/50 px-2 py-1 ">
         <Action
@@ -510,6 +548,7 @@ export function PostCard({ post }: { post: Post }) {
         <Action
           icon={Bookmark}
           label={post.saved ? "Saved" : "Save"}
+          count={post.saveCount}
           active={post.saved}
           onClick={() => (isLoggedIn ? save({ id: post.id, saved: post.saved }) : requireLogin())}
         />
@@ -622,6 +661,24 @@ export function PostCard({ post }: { post: Post }) {
         <PostEditForm post={post} onDone={() => setEditOpen(false)} />
       </Modal>
 
+      <PostUserListModal
+        open={reactionsOpen}
+        onClose={() => setReactionsOpen(false)}
+        title="Reactions"
+        users={reactionUsers}
+        isLoading={loadingReactions}
+        emptyText="No reactions yet."
+      />
+
+      <PostUserListModal
+        open={saversOpen}
+        onClose={() => setSaversOpen(false)}
+        title="Saved by"
+        users={saverUsers}
+        isLoading={loadingSavers}
+        emptyText="No one has saved this post yet."
+      />
+
       <Modal
         open={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
@@ -655,7 +712,19 @@ export function PostCard({ post }: { post: Post }) {
   );
 }
 
-function Stats({ post }: { post: Post }) {
+function Stats({
+  post,
+  onLikesClick,
+  onCommentsClick,
+  onSavesClick,
+}: {
+  post: Post;
+  onLikesClick?: () => void;
+  onCommentsClick?: () => void;
+  /** Only the post author should pass this — viewers without it see a
+   *  non-clickable count. */
+  onSavesClick?: () => void;
+}) {
   const hasStats =
     post.likeCount > 0 ||
     post.commentCount > 0 ||
@@ -668,23 +737,33 @@ function Stats({ post }: { post: Post }) {
       {/* Left: Stacked Reaction Icons + Like Count */}
       <div className="flex items-center">
         {post.likeCount > 0 && (
-          <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onLikesClick}
+            disabled={!onLikesClick}
+            className="flex items-center gap-1.5 rounded hover:underline disabled:cursor-default disabled:no-underline"
+          >
             <div className="flex -space-x-1">
               <div className="z-[3] flex h-[16px] w-[16px] items-center justify-center rounded-full bg-blue-500 ring-1 ring-surface">
                 <ThumbsUp className="h-[9px] w-[9px] fill-white text-white" />
               </div>
             </div>
             <span className="ml-1 font-medium">{post.likeCount}</span>
-          </div>
+          </button>
         )}
       </div>
 
       {/* Right: Comments, Reposts and Saves */}
       <div className="flex items-center gap-1.5 font-medium">
         {post.commentCount > 0 && (
-          <span>
+          <button
+            type="button"
+            onClick={onCommentsClick}
+            disabled={!onCommentsClick}
+            className="hover:underline disabled:cursor-default disabled:no-underline"
+          >
             {post.commentCount} {post.commentCount === 1 ? "comment" : "comments"}
-          </span>
+          </button>
         )}
         {post.commentCount > 0 &&
           ((post.repostCount ?? 0) > 0 || (post.saveCount ?? 0) > 0) && (
@@ -699,11 +778,20 @@ function Stats({ post }: { post: Post }) {
             {(post.saveCount ?? 0) > 0 && <span>•</span>}
           </>
         )}
-        {(post.saveCount ?? 0) > 0 && (
-          <span>
-            {post.saveCount} {post.saveCount === 1 ? "save" : "saves"}
-          </span>
-        )}
+        {(post.saveCount ?? 0) > 0 &&
+          (onSavesClick ? (
+            <button
+              type="button"
+              onClick={onSavesClick}
+              className="hover:underline"
+            >
+              {post.saveCount} {post.saveCount === 1 ? "save" : "saves"}
+            </button>
+          ) : (
+            <span>
+              {post.saveCount} {post.saveCount === 1 ? "save" : "saves"}
+            </span>
+          ))}
       </div>
     </div>
   );
@@ -714,6 +802,7 @@ function Action({
   label,
   active,
   onClick,
+  count,
 }: {
   icon: React.ElementType;
   label: string;
@@ -721,6 +810,7 @@ function Action({
   onClick?: () => void;
   count?: number;
 }) {
+  const showCount = typeof count === "number" && Number.isFinite(count) && count > 0;
   return (
     <button
       type="button"
@@ -730,14 +820,17 @@ function Action({
         active ? "text-brand" : "text-muted-foreground hover:text-foreground",
       )}
     >
-      <Icon 
+      <Icon
         className={cn(
-          "w-[20px] h-[20px] group-hover:scale-110 transition-all ease-in-out", 
+          "w-[20px] h-[20px] group-hover:scale-110 transition-all ease-in-out",
           active && "fill-brand/10 text-brand"
-        )} 
-        strokeWidth={2} 
+        )}
+        strokeWidth={2}
       />
-      <span className="text-[12px] font-bold">{label}</span>
+      <span className="text-[12px] font-bold">
+        {label}
+        {showCount ? <span className="ml-1 font-semibold">{count}</span> : null}
+      </span>
     </button>
   );
 }

@@ -1,69 +1,58 @@
-import { api } from "@/lib/axios";
-import { apiRoutes } from "@/config/routes/api.routes";
-import { ApiError } from "@/lib/api-error";
-import type { Story, StoryMediaType } from "@/lib/stories";
+import {
+  addStoredStory,
+  detectMediaType,
+  getStoredStories,
+  isStoryActive,
+  removeStoredStory,
+  type Story,
+  type StoryMediaType,
+} from "@/lib/stories";
+import { useAppStore } from "@/store/main.store";
 
-type RawStory = {
-  id?: string;
-  _id?: string;
-  userId?: string;
-  user_id?: string;
-  username?: string;
-  name?: string;
-  avatarUrl?: string;
-  avatar_url?: string;
-  content?: string;
-  mediaUrl?: string;
-  media_url?: string;
-  mediaType?: StoryMediaType;
-  media_type?: StoryMediaType;
-  createdAt?: string;
-};
-
-function mapStory(raw: RawStory): Story {
-  return {
-    id: String(raw.id ?? raw._id ?? ""),
-    userId: raw.userId ?? raw.user_id,
-    name: raw.name ?? raw.username ?? "Broker",
-    username: raw.username ?? "",
-    avatarUrl: raw.avatarUrl ?? raw.avatar_url,
-    content: raw.content ?? "",
-    mediaUrl: raw.mediaUrl ?? raw.media_url,
-    mediaType: raw.mediaType ?? raw.media_type,
-    createdAt: raw.createdAt ?? new Date().toISOString(),
-  };
+function makeId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `story_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/**
+ * Stories were never ported from bs-backend to chanakya-astra-service.
+ * Until a backend exists, persist stories in localStorage so the rail and
+ * profile views (which already read from localStorage) work end-to-end.
+ */
 export const storyService = {
   async listFeed(): Promise<Story[]> {
-    try {
-      const { data } = await api.get<{ data: RawStory[] }>(apiRoutes.stories.feed);
-      const items = Array.isArray(data?.data) ? data.data : [];
-      return items.map(mapStory);
-    } catch (error) {
-      /** Guest/expired token: empty rail is fine. Real errors should surface
-       *  so React Query can retry and the user can see why nothing loaded. */
-      if (error instanceof ApiError && error.isUnauthorized) {
-        return [];
-      }
-      throw error;
-    }
+    return getStoredStories().filter((s) => isStoryActive(s));
   },
 
   async create(input: {
     content: string;
     mediaUrl?: string;
     mediaType?: StoryMediaType;
-  }): Promise<Story | null> {
-    const { data } = await api.post<{ data: RawStory }>(apiRoutes.stories.create, {
+  }): Promise<Story> {
+    const user = useAppStore.getState().user;
+    const userId = String(user?._id ?? user?.id ?? "");
+    if (!userId) {
+      throw new Error("You must be signed in to post a story.");
+    }
+    const story: Story = {
+      id: makeId(),
+      userId,
+      name: user?.name ?? user?.username ?? "Broker",
+      username: user?.username ?? "",
+      avatarUrl: user?.avatarUrl,
       content: input.content,
-      media_url: input.mediaUrl,
-      media_type: input.mediaType,
-    });
-    return data?.data ? mapStory(data.data) : null;
+      mediaUrl: input.mediaUrl,
+      mediaType: input.mediaUrl
+        ? (input.mediaType ?? detectMediaType(input.mediaUrl))
+        : undefined,
+      createdAt: new Date().toISOString(),
+    };
+    return addStoredStory(story);
   },
 
   async remove(id: string): Promise<void> {
-    await api.delete(apiRoutes.stories.byId(id));
+    removeStoredStory(id);
   },
 };
